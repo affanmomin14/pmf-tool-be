@@ -63,6 +63,7 @@ model Assessment {
   utmCampaign   String?
   ipHash             String?
   classificationData Json?
+  researchData       Json?
   createdAt          DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 

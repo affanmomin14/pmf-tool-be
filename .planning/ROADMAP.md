@@ -179,7 +179,7 @@ Note: Phases 5 and 6 can execute in parallel (both depend on Phase 4, neither de
 |-------|----------------|--------|-----------|
 | 1. Foundation & Middleware | 3/3 | Complete | 2026-03-02 |
 | 2. System Content & Seed Data | 2/2 | Complete    | 2026-03-02 |
-| 3. Assessment Flow | 2/2 | Complete | 2026-03-02 |
+| 3. Assessment Flow | 2/2 | Complete    | 2026-03-02 |
 | 4. AI Infrastructure & Classification | 0/2 | Not started | - |
 | 5. Research Pipeline | 0/2 | Not started | - |
 | 6. Scoring Engine | 0/2 | Not started | - |

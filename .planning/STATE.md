@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-last_updated: "2026-03-02T07:10:00Z"
+status: unknown
+last_updated: "2026-03-02T08:10:42Z"
 progress:
-  total_phases: 9
-  completed_phases: 3
-  total_plans: 21
-  completed_plans: 7
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Founders answer 5 questions and receive a data-backed, AI-generated PMF diagnostic report in under 15 seconds
-**Current focus:** Phase 3: Assessment Flow -- COMPLETE
+**Current focus:** Phase 4: AI Infrastructure & Classification -- COMPLETE
 
 ## Current Position
 
-Phase: 3 of 9 (Assessment Flow) -- COMPLETE
+Phase: 4 of 9 (AI Infrastructure & Classification) -- COMPLETE
 Plan: 2 of 2 in current phase (all complete)
-Status: Phase 03 complete, ready for Phase 04
-Last activity: 2026-03-02 -- Completed 03-02 response storage with micro-insight matching
+Status: Phase 4 complete, ready for Phase 5
+Last activity: 2026-03-02 -- Completed 04-02 classification service with prompt engineering
 
-Progress: [████░░░░░░] 33%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 9
 - Average duration: 2 min
-- Total execution time: 0.19 hours
+- Total execution time: 0.25 hours
 
 **By Phase:**
 
@@ -43,9 +43,10 @@ Progress: [████░░░░░░] 33%
 | 01-foundation-middleware | 3 | 5 min | 2 min |
 | 02-system-content-seed-data | 2 | 3 min | 2 min |
 | 03-assessment-flow | 2 | 4 min | 2 min |
+| 04-ai-infrastructure-classification | 2 | 4 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (1 min), 02-01 (1 min), 02-02 (2 min), 03-01 (2 min), 03-02 (2 min)
+- Last 5 plans: 02-02 (2 min), 03-01 (2 min), 03-02 (2 min), 04-01 (2 min), 04-02 (2 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -77,6 +78,16 @@ Recent decisions affecting current work:
 - [03-02]: Random micro-insight selection (not keyword-based) since triggerKeywords are empty in seed data
 - [03-02]: P2002 duplicate returns existing response (idempotent for frontend retries)
 - [03-02]: Status transition uses updateMany with status filter for concurrency safety
+- [04-01]: Use z.toJSONSchema() (Zod v4 native) instead of zodResponseFormat (broken with Zod v4)
+- [04-01]: Use .nullable() instead of .optional() for OpenAI strict mode JSON schema compatibility
+- [04-01]: Math.ceil for cost calculation ensures every call records at least 1 cent
+- [04-01]: Real-time DB query for daily spend (no cache) -- accuracy matters for hard-block at ~100 req/day
+- [04-01]: 1 retry (2 total attempts) with 10s timeout fits under 15s pipeline budget
+- [04-02]: Q1 minimum 10 chars rejects empty/gibberish before LLM call; vague-but-real goes to LLM with low confidence
+- [04-02]: Few-shot examples as user/assistant message pairs (not embedded in system prompt) per OpenAI best practices
+- [04-02]: Reasoning field stripped from classificationData storage but preserved in AiLog via wrapper
+- [04-02]: Direct prisma.assessment.update for atomic classificationData + status transition (not transitionStatus helper)
+- [04-02]: Q3 uses answerValue first (single_select) with answerText fallback
 
 ### Pending Todos
 
@@ -84,12 +95,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 4]: Zod 4 + OpenAI SDK zodResponseFormat compatibility is untested -- verify early in Phase 4
+- [Phase 4]: RESOLVED -- zodResponseFormat is broken with Zod v4; using z.toJSONSchema() instead (04-01)
 - [Phase 5]: OpenAI web search API reliability is a known quality gap vs ChatGPT UI -- may need fallback strategy
 - [Phase 9]: Puppeteer deployment environment (Docker/cloud) affects resource management patterns
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 03-02-PLAN.md
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None

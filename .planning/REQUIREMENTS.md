@@ -44,11 +44,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### AI Classification
 
-- [ ] **AICL-01**: POST /api/assessments/:id/complete triggers Prompt 1 (Parse & Classify) using GPT-4o with JSON mode, temperature 0.2
-- [ ] **AICL-02**: Classification extracts: product category, sub-category, confidence levels, search queries, likely competitors, problem type, ICP specificity (1-5), ICP details, product signals
-- [ ] **AICL-03**: Classification prompt includes chain-of-thought reasoning, few-shot examples (3 cases), and defensive guardrails for garbage input
-- [ ] **AICL-04**: Classification output validated with Zod schema; returns error object if Q1 is empty/nonsensical
-- [ ] **AICL-05**: Classification call wrapped with 10-second timeout, logged to AI logs with tokens and cost
+- [x] **AICL-01**: POST /api/assessments/:id/complete triggers Prompt 1 (Parse & Classify) using GPT-4o with JSON mode, temperature 0.2
+- [x] **AICL-02**: Classification extracts: product category, sub-category, confidence levels, search queries, likely competitors, problem type, ICP specificity (1-5), ICP details, product signals
+- [x] **AICL-03**: Classification prompt includes chain-of-thought reasoning, few-shot examples (3 cases), and defensive guardrails for garbage input
+- [x] **AICL-04**: Classification output validated with Zod schema; returns error object if Q1 is empty/nonsensical
+- [x] **AICL-05**: Classification call wrapped with 10-second timeout, logged to AI logs with tokens and cost
 
 ### Research Pipeline
 
@@ -174,11 +174,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASSMT-04 | Phase 3 | Complete |
 | ASSMT-05 | Phase 3 | Complete |
 | ASSMT-06 | Phase 3 | Complete |
-| AICL-01 | Phase 4 | Pending |
-| AICL-02 | Phase 4 | Pending |
-| AICL-03 | Phase 4 | Pending |
-| AICL-04 | Phase 4 | Pending |
-| AICL-05 | Phase 4 | Pending |
+| AICL-01 | Phase 4 | Complete |
+| AICL-02 | Phase 4 | Complete |
+| AICL-03 | Phase 4 | Complete |
+| AICL-04 | Phase 4 | Complete |
+| AICL-05 | Phase 4 | Complete |
 | RES-01 | Phase 5 | Pending |
 | RES-02 | Phase 5 | Pending |
 | RES-03 | Phase 5 | Pending |
