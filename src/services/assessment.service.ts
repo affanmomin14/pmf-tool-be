@@ -1,6 +1,7 @@
 import { prisma } from '../db/prisma';
-import { ProblemType, AssessmentStatus } from '../generated/prisma/client';
+import { ProblemType, AssessmentStatus, Prisma } from '../generated/prisma/client';
 import { NotFoundError, ValidationError } from '../errors';
+import { sanitizeInput } from '../utils/sanitize';
 
 // Explicit mapping: ProblemType enum values -> ProblemCategory slugs
 // NOTE: product_quality maps to 'positioning' (not 'product-quality')
@@ -114,4 +115,89 @@ export const transitionStatus = async (
       updatedAt: true,
     },
   });
+};
+
+export const storeResponseWithInsight = async (data: {
+  assessmentId: string;
+  questionId: number;
+  answerText?: string;
+  answerValue?: string;
+  timeSpentMs?: number;
+  questionOrder: number;
+}) => {
+  // 1. Verify assessment exists and get current status
+  const assessment = await prisma.assessment.findUnique({
+    where: { id: data.assessmentId },
+    select: { id: true, status: true },
+  });
+  if (!assessment) throw new NotFoundError('Assessment not found');
+
+  // 2. Create response with sanitized answerText; handle P2002 duplicate
+  let response;
+  try {
+    response = await prisma.response.create({
+      data: {
+        assessmentId: data.assessmentId,
+        questionId: data.questionId,
+        answerText: data.answerText ? sanitizeInput(data.answerText) : null,
+        answerValue: data.answerValue || null,
+        timeSpentMs: data.timeSpentMs || null,
+        questionOrder: data.questionOrder,
+      },
+      select: {
+        id: true,
+        questionId: true,
+        answerText: true,
+        answerValue: true,
+        questionOrder: true,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      // Duplicate response for this question -- return existing
+      const existing = await prisma.response.findFirst({
+        where: {
+          assessmentId: data.assessmentId,
+          questionId: data.questionId,
+        },
+        select: {
+          id: true,
+          questionId: true,
+          answerText: true,
+          answerValue: true,
+          questionOrder: true,
+        },
+      });
+      if (existing) {
+        response = existing;
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
+    }
+  }
+
+  // 3. Auto-transition started -> in_progress on first response (idempotent)
+  if (assessment.status === 'started') {
+    await prisma.assessment.updateMany({
+      where: { id: data.assessmentId, status: 'started' },
+      data: { status: 'in_progress' },
+    });
+  }
+
+  // 4. Get a random micro-insight for this questionId
+  const insights = await prisma.microInsight.findMany({
+    where: { questionId: data.questionId, isActive: true },
+    select: { insightText: true, source: true },
+  });
+  const microInsight =
+    insights.length > 0
+      ? insights[Math.floor(Math.random() * insights.length)]
+      : null;
+
+  return { response, microInsight };
 };
