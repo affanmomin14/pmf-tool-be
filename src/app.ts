@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { env } from './config/env';
 import { requestLogger } from './middlewares/requestLogger.middleware';
 import { errorHandler } from './middlewares/error.middleware';
+import systemRoutes from './routes/system.routes';
 
 export const app = express();
 
@@ -24,7 +25,8 @@ app.get('/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok' } });
 });
 
-// === Future routes mount here ===
+// Routes
+app.use('/api/system', systemRoutes);
 
 // Error handler (MUST be LAST middleware - after all routes)
 app.use(errorHandler);
