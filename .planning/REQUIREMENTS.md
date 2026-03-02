@@ -56,7 +56,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **RES-02**: Research service finds market size data (TAM, SAM, growth rate/CAGR, regional splits)
 - [x] **RES-03**: Research service finds category complaints (top 4-6 complaint themes with approximate % mentions)
 - [x] **RES-04**: Research service finds category patterns (top 3 companies' sales models, positioning language, gaps)
-- [ ] **RES-05**: Research results cached in research_cache table keyed by category + sub_category with 7-day TTL; cache hit skips API calls entirely
+- [x] **RES-05**: Research results cached in research_cache table keyed by category + sub_category with 7-day TTL; cache hit skips API calls entirely
 - [x] **RES-06**: When research is thin (<3 competitors or no market data), set research_quality: "limited" flag and never fabricate data
 
 ### Scoring
@@ -183,7 +183,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RES-02 | Phase 5 | Complete |
 | RES-03 | Phase 5 | Complete |
 | RES-04 | Phase 5 | Complete |
-| RES-05 | Phase 5 | Pending |
+| RES-05 | Phase 5 | Complete |
 | RES-06 | Phase 5 | Complete |
 | SCOR-01 | Phase 6 | Pending |
 | SCOR-02 | Phase 6 | Pending |

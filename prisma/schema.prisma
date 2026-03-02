@@ -64,6 +64,7 @@ model Assessment {
   ipHash             String?
   classificationData Json?
   researchData       Json?
+  scoreData          Json?
   createdAt          DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 

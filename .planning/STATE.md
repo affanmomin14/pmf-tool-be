@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T09:08:18Z"
+last_updated: "2026-03-02T09:12:42.169Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Founders answer 5 questions and receive a data-backed, AI-generated PMF diagnostic report in under 15 seconds
-**Current focus:** Phase 5: Research Pipeline -- IN PROGRESS
+**Current focus:** Phase 5: Research Pipeline -- COMPLETE
 
 ## Current Position
 
-Phase: 5 of 9 (Research Pipeline)
-Plan: 1 of 2 in current phase
-Status: Executing Phase 5
-Last activity: 2026-03-02 -- Completed 05-01 research pipeline core
+Phase: 5 of 9 (Research Pipeline) -- COMPLETE
+Plan: 2 of 2 in current phase (done)
+Status: Phase 5 complete, ready for Phase 6
+Last activity: 2026-03-02 -- Completed 05-02 research endpoint wiring
 
-Progress: [█████████░] 91%
+Progress: [███████████] 100% (11/11 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 2 min
-- Total execution time: 0.32 hours
+- Total execution time: 0.33 hours
 
 **By Phase:**
 
@@ -44,10 +44,10 @@ Progress: [█████████░] 91%
 | 02-system-content-seed-data | 2 | 3 min | 2 min |
 | 03-assessment-flow | 2 | 4 min | 2 min |
 | 04-ai-infrastructure-classification | 2 | 4 min | 2 min |
-| 05-research-pipeline | 1/2 | 4 min | 4 min |
+| 05-research-pipeline | 2/2 | 5 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (2 min), 03-02 (2 min), 04-01 (2 min), 04-02 (2 min), 05-01 (4 min)
+- Last 5 plans: 03-02 (2 min), 04-01 (2 min), 04-02 (2 min), 05-01 (4 min), 05-02 (1 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -93,6 +93,8 @@ Recent decisions affecting current work:
 - [05-01]: 30s timeout for web search calls (vs 10s classification) due to external web fetches
 - [05-01]: Per-dimension functions never throw -- catch errors and return empty/null defaults for pipeline resilience
 - [05-01]: Research quality flagged as 'limited' when <3 competitors or no TAM -- no fabrication
+- [05-02]: Warning field at top-level of response envelope (not nested in data) for easy frontend consumption
+- [05-02]: No body validation on research route -- inputs derived from assessment's classificationData
 
 ### Pending Todos
 
@@ -107,5 +109,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 05-01-PLAN.md
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
