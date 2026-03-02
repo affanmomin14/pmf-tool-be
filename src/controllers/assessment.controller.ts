@@ -17,3 +17,12 @@ export const getAssessment = async (req: Request, res: Response) => {
   const assessment = await assessmentService.getAssessmentWithResponses(id);
   res.json({ success: true, data: assessment });
 };
+
+export const createResponse = async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const result = await assessmentService.storeResponseWithInsight({
+    assessmentId: id,
+    ...req.body,
+  });
+  res.status(201).json({ success: true, data: result });
+};

@@ -16,7 +16,23 @@ const assessmentParamsSchema = z.object({
   id: z.uuid(),
 });
 
+const createResponseSchema = z.object({
+  questionId: z.number().int().min(1).max(5),
+  answerText: z.string().max(2000).optional(),
+  answerValue: z.string().max(200).optional(),
+  timeSpentMs: z.number().int().min(0).optional(),
+  questionOrder: z.number().int().min(1).max(5),
+});
+
 router.post('/', validate({ body: createAssessmentSchema }), ctrl.createAssessment);
 router.get('/:id', validate({ params: assessmentParamsSchema }), ctrl.getAssessment);
+router.post(
+  '/:id/responses',
+  validate({
+    params: assessmentParamsSchema,
+    body: createResponseSchema,
+  }),
+  ctrl.createResponse,
+);
 
 export default router;
