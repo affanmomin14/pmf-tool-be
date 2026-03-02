@@ -13,7 +13,7 @@ This roadmap delivers a production-ready backend that powers a 5-question PMF di
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Middleware** - Database schema, env validation, error handling, utilities, and request middleware
-- [ ] **Phase 2: System Content & Seed Data** - Read-only content API and seed data for questions, categories, facts, social proof, micro-insights
+- [x] **Phase 2: System Content & Seed Data** - Read-only content API and seed data for questions, categories, facts, social proof, micro-insights
 - [ ] **Phase 3: Assessment Flow** - Assessment session CRUD with response storage, session restore, and status lifecycle
 - [ ] **Phase 4: AI Infrastructure & Classification** - Centralized OpenAI client, GPT-4o classification with structured output, cost tracking
 - [ ] **Phase 5: Research Pipeline** - OpenAI web search for competitors, market data, complaints, patterns with 7-day category cache
@@ -54,7 +54,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md -- System content service layer, controller, router, and 5 GET API endpoints
-- [ ] 02-02-PLAN.md -- Idempotent seed script for all system tables (37 records across 5 tables)
+- [x] 02-02-PLAN.md -- Idempotent seed script for all system tables (37 records across 5 tables)
 
 ### Phase 3: Assessment Flow
 **Goal**: A founder can start an assessment, submit responses to each question, restore a session, and receive micro-insights -- establishing the session model the AI pipeline operates on
@@ -178,7 +178,7 @@ Note: Phases 5 and 6 can execute in parallel (both depend on Phase 4, neither de
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Middleware | 3/3 | Complete | 2026-03-02 |
-| 2. System Content & Seed Data | 1/2 | In progress | - |
+| 2. System Content & Seed Data | 2/2 | Complete | 2026-03-02 |
 | 3. Assessment Flow | 0/2 | Not started | - |
 | 4. AI Infrastructure & Classification | 0/2 | Not started | - |
 | 5. Research Pipeline | 0/2 | Not started | - |

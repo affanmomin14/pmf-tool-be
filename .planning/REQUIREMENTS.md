@@ -31,7 +31,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SYS-03**: GET /api/system/facts?location= returns active PMF facts filtered by display location
 - [x] **SYS-04**: GET /api/system/social-proof returns active social proof items in display order
 - [x] **SYS-05**: GET /api/system/micro-insights/:questionId returns insights for a specific question
-- [ ] **SYS-06**: Seed data populates all system tables (5 categories, 5 questions, 15+ micro-insights, 6 facts, 6 testimonials)
+- [x] **SYS-06**: Seed data populates all system tables (5 categories, 5 questions, 15+ micro-insights, 6 facts, 6 testimonials)
 
 ### Assessment Flow
 
@@ -167,7 +167,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SYS-03 | Phase 2 | Complete |
 | SYS-04 | Phase 2 | Complete |
 | SYS-05 | Phase 2 | Complete |
-| SYS-06 | Phase 2 | Pending |
+| SYS-06 | Phase 2 | Complete |
 | ASSMT-01 | Phase 3 | Pending |
 | ASSMT-02 | Phase 3 | Pending |
 | ASSMT-03 | Phase 3 | Pending |
