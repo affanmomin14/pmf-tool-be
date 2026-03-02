@@ -140,3 +140,121 @@ export async function callOpenAI(params: {
     throw new AIError(`AI service failed: ${error.message}`);
   }
 }
+
+/**
+ * OpenAI Responses API wrapper for web search + structured parsing.
+ * Uses openai.responses.create() -- completely different API from Chat Completions.
+ *
+ * Two-step usage pattern:
+ * 1. Search call: web_search_preview tool enabled, no textFormat
+ * 2. Parse call: no tools, textFormat with zodTextFormat for structured output
+ *
+ * Handles:
+ * - Daily spend limit enforcement (hard block)
+ * - 30-second timeout (web search is slower than pure LLM)
+ * - 1 retry (2 total attempts) via SDK built-in maxRetries
+ * - Cost calculation and AiLog persistence (success and failure)
+ * - Error differentiation: rate limit (429) vs timeout vs general failure
+ */
+export async function callOpenAIWebSearch(params: {
+  assessmentId?: string;
+  promptName: string;
+  input: string | Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+  searchContextSize?: 'low' | 'medium' | 'high';
+  textFormat?: any;
+  temperature?: number;
+  maxOutputTokens?: number;
+}): Promise<{ outputText: string; usage: { inputTokens: number; outputTokens: number; totalTokens: number } }> {
+  // 1. Check daily spend limit -- hard block
+  const todaySpend = await getTodaySpendCents();
+  if (todaySpend >= env.DAILY_SPEND_LIMIT_CENTS) {
+    throw new SpendLimitError();
+  }
+
+  const model = env.OPENAI_MODEL;
+  const start = Date.now();
+
+  try {
+    // 2. Build Responses API call
+    // When textFormat is provided (parse step), omit tools (no web search).
+    // When textFormat is NOT provided (search step), include web_search_preview tool.
+    const tools = params.textFormat
+      ? undefined
+      : [{ type: 'web_search_preview' as const, search_context_size: params.searchContextSize || 'medium' }];
+
+    const text = params.textFormat ? { format: params.textFormat } : undefined;
+
+    const response = await openai.responses.create(
+      {
+        model,
+        input: params.input as any,
+        tools: tools as any,
+        text: text as any,
+        temperature: params.temperature ?? 0.2,
+        max_output_tokens: params.maxOutputTokens ?? env.OPENAI_MAX_TOKENS,
+      },
+      {
+        timeout: 30_000,
+        maxRetries: 1,
+      },
+    );
+
+    const latencyMs = Date.now() - start;
+    const usage = response.usage!;
+    const inputTokens = usage.input_tokens;
+    const outputTokens = usage.output_tokens;
+    const totalTokens = usage.total_tokens;
+    const costCents = calculateCostCents(model, inputTokens, outputTokens);
+
+    // 3. Log success to AiLog
+    await prisma.aiLog.create({
+      data: {
+        assessmentId: params.assessmentId,
+        model,
+        promptName: params.promptName,
+        inputTokens,
+        outputTokens,
+        totalTokens,
+        costCents,
+        latencyMs,
+        success: true,
+      },
+    });
+
+    return {
+      outputText: response.output_text,
+      usage: { inputTokens, outputTokens, totalTokens },
+    };
+  } catch (error: any) {
+    const latencyMs = Date.now() - start;
+
+    // 4. Log failure to AiLog (before re-throwing)
+    await prisma.aiLog.create({
+      data: {
+        assessmentId: params.assessmentId,
+        model,
+        promptName: params.promptName,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        costCents: 0,
+        latencyMs,
+        success: false,
+        errorMessage: error.message?.slice(0, 500),
+      },
+    });
+
+    // 5. Differentiate error types for callers
+    if (error.status === 429) {
+      throw new AIError('OpenAI rate limit exceeded. Please retry shortly.');
+    }
+    if (
+      error.code === 'ETIMEDOUT' ||
+      error.code === 'ECONNABORTED' ||
+      error.name === 'APIConnectionTimeoutError'
+    ) {
+      throw new AIError('Web search timed out. Please try again.');
+    }
+    throw new AIError(`Web search service failed: ${error.message}`);
+  }
+}
