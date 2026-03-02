@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import * as assessmentService from '../services/assessment.service';
 import * as classificationService from '../services/classification.service';
 import * as researchService from '../services/research.service';
+import * as scoringService from '../services/scoring.service';
 import { hashIp } from '../utils/hash';
 
 export const createAssessment = async (req: Request, res: Response) => {
@@ -50,4 +51,21 @@ export const runResearch = async (req: Request, res: Response) => {
   }
 
   res.json(response);
+};
+
+export const scoreAssessment = async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const result = await scoringService.scoreAssessment(id);
+  res.json({
+    success: true,
+    data: {
+      finalScore: result.finalScore,
+      pmfStage: result.pmfStage,
+      primaryBreak: result.primaryBreak,
+      secondaryBreak: result.secondaryBreak,
+      founderMismatch: result.founderMismatch,
+      dimensions: result.dimensions,
+      benchmarks: result.benchmarks,
+    },
+  });
 };
