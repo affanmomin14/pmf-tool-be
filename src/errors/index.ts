@@ -33,3 +33,9 @@ export class AIError extends AppError {
     super(message, 502, 'AI_ERROR');
   }
 }
+
+export class SpendLimitError extends AppError {
+  constructor(message: string = 'Daily AI spend limit reached. Try again tomorrow.') {
+    super(message, 429, 'SPEND_LIMIT_EXCEEDED');
+  }
+}
