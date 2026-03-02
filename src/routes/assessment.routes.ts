@@ -41,4 +41,10 @@ router.post(
   ctrl.completeAssessment,
 );
 
+router.post(
+  '/:id/research',
+  validate({ params: assessmentParamsSchema }),
+  ctrl.runResearch,
+);
+
 export default router;

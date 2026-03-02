@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import * as assessmentService from '../services/assessment.service';
 import * as classificationService from '../services/classification.service';
+import * as researchService from '../services/research.service';
 import { hashIp } from '../utils/hash';
 
 export const createAssessment = async (req: Request, res: Response) => {
@@ -32,4 +33,21 @@ export const completeAssessment = async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const classification = await classificationService.classifyAssessment(id);
   res.json({ success: true, data: { classification } });
+};
+
+export const runResearch = async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const forceRefresh = req.query.refresh === 'true';
+  const result = await researchService.runResearch(id, forceRefresh);
+
+  const response: Record<string, any> = {
+    success: true,
+    data: result,
+  };
+
+  if (result.researchQuality === 'limited') {
+    response.warning = 'Research data is limited for this category. Some sections may have incomplete data.';
+  }
+
+  res.json(response);
 };

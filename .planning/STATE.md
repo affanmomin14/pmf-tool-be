@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T08:10:42Z"
+last_updated: "2026-03-02T09:08:18Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Founders answer 5 questions and receive a data-backed, AI-generated PMF diagnostic report in under 15 seconds
-**Current focus:** Phase 4: AI Infrastructure & Classification -- COMPLETE
+**Current focus:** Phase 5: Research Pipeline -- IN PROGRESS
 
 ## Current Position
 
-Phase: 4 of 9 (AI Infrastructure & Classification) -- COMPLETE
-Plan: 2 of 2 in current phase (all complete)
-Status: Phase 4 complete, ready for Phase 5
-Last activity: 2026-03-02 -- Completed 04-02 classification service with prompt engineering
+Phase: 5 of 9 (Research Pipeline)
+Plan: 1 of 2 in current phase
+Status: Executing Phase 5
+Last activity: 2026-03-02 -- Completed 05-01 research pipeline core
 
-Progress: [██████████] 100%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: 2 min
-- Total execution time: 0.25 hours
+- Total execution time: 0.32 hours
 
 **By Phase:**
 
@@ -44,9 +44,10 @@ Progress: [██████████] 100%
 | 02-system-content-seed-data | 2 | 3 min | 2 min |
 | 03-assessment-flow | 2 | 4 min | 2 min |
 | 04-ai-infrastructure-classification | 2 | 4 min | 2 min |
+| 05-research-pipeline | 1/2 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (2 min), 03-01 (2 min), 03-02 (2 min), 04-01 (2 min), 04-02 (2 min)
+- Last 5 plans: 03-01 (2 min), 03-02 (2 min), 04-01 (2 min), 04-02 (2 min), 05-01 (4 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -88,6 +89,10 @@ Recent decisions affecting current work:
 - [04-02]: Reasoning field stripped from classificationData storage but preserved in AiLog via wrapper
 - [04-02]: Direct prisma.assessment.update for atomic classificationData + status transition (not transitionStatus helper)
 - [04-02]: Q3 uses answerValue first (single_select) with answerText fallback
+- [05-01]: Two-step search+parse pattern: web search without textFormat, then parse with zodTextFormat (cannot combine tools with structured output)
+- [05-01]: 30s timeout for web search calls (vs 10s classification) due to external web fetches
+- [05-01]: Per-dimension functions never throw -- catch errors and return empty/null defaults for pipeline resilience
+- [05-01]: Research quality flagged as 'limited' when <3 competitors or no TAM -- no fabrication
 
 ### Pending Todos
 
@@ -102,5 +107,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 04-02-PLAN.md
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

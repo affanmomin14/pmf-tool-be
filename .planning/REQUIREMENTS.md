@@ -52,12 +52,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Research Pipeline
 
-- [ ] **RES-01**: Research service uses OpenAI web search to find competitors (name, G2 rating, review count, funding, pricing model, free tier, tagline) for classified category
-- [ ] **RES-02**: Research service finds market size data (TAM, SAM, growth rate/CAGR, regional splits)
-- [ ] **RES-03**: Research service finds category complaints (top 4-6 complaint themes with approximate % mentions)
-- [ ] **RES-04**: Research service finds category patterns (top 3 companies' sales models, positioning language, gaps)
+- [x] **RES-01**: Research service uses OpenAI web search to find competitors (name, G2 rating, review count, funding, pricing model, free tier, tagline) for classified category
+- [x] **RES-02**: Research service finds market size data (TAM, SAM, growth rate/CAGR, regional splits)
+- [x] **RES-03**: Research service finds category complaints (top 4-6 complaint themes with approximate % mentions)
+- [x] **RES-04**: Research service finds category patterns (top 3 companies' sales models, positioning language, gaps)
 - [ ] **RES-05**: Research results cached in research_cache table keyed by category + sub_category with 7-day TTL; cache hit skips API calls entirely
-- [ ] **RES-06**: When research is thin (<3 competitors or no market data), set research_quality: "limited" flag and never fabricate data
+- [x] **RES-06**: When research is thin (<3 competitors or no market data), set research_quality: "limited" flag and never fabricate data
 
 ### Scoring
 
@@ -179,12 +179,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AICL-03 | Phase 4 | Complete |
 | AICL-04 | Phase 4 | Complete |
 | AICL-05 | Phase 4 | Complete |
-| RES-01 | Phase 5 | Pending |
-| RES-02 | Phase 5 | Pending |
-| RES-03 | Phase 5 | Pending |
-| RES-04 | Phase 5 | Pending |
+| RES-01 | Phase 5 | Complete |
+| RES-02 | Phase 5 | Complete |
+| RES-03 | Phase 5 | Complete |
+| RES-04 | Phase 5 | Complete |
 | RES-05 | Phase 5 | Pending |
-| RES-06 | Phase 5 | Pending |
+| RES-06 | Phase 5 | Complete |
 | SCOR-01 | Phase 6 | Pending |
 | SCOR-02 | Phase 6 | Pending |
 | SCOR-03 | Phase 6 | Pending |
