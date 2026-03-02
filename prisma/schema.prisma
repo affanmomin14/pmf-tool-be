@@ -1,0 +1,262 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum AssessmentStatus {
+  started
+  in_progress
+  completed
+  report_generated
+  unlocked
+}
+
+enum PmfStage {
+  pre_pmf
+  approaching
+  early_pmf
+  strong
+}
+
+enum QuestionType {
+  text
+  single_select
+  multi_select
+  scale
+}
+
+enum ProblemType {
+  market_fit
+  product_quality
+  distribution
+  monetization
+  retention
+}
+
+enum ProofType {
+  testimonial
+  stat
+  case_study
+}
+
+// ============================================================================
+// DOMAIN 1: Assessment Pipeline (UUID PKs)
+// ============================================================================
+
+model Assessment {
+  id            String           @id @default(uuid())
+  problemType   ProblemType
+  status        AssessmentStatus @default(started)
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  ipHash        String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  responses Response[]
+  report    Report?
+  lead      Lead?
+
+  @@index([status])
+  @@index([ipHash])
+  @@index([createdAt])
+}
+
+model Response {
+  id            String   @id @default(uuid())
+  assessmentId  String
+  questionId    Int
+  answerText    String?
+  answerValue   String?
+  timeSpentMs   Int?
+  questionOrder Int
+  createdAt     DateTime @default(now())
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  question   Question   @relation(fields: [questionId], references: [id])
+
+  @@unique([assessmentId, questionId])
+}
+
+model Report {
+  id                    String   @id @default(uuid())
+  assessmentId          String   @unique
+  content               Json
+  scores                Json
+  previewContent        Json
+  intermediateArtifacts Json?
+  pdfUrl                String?
+  pmfScore              Int
+  pmfStage              PmfStage
+  primaryBreak          String
+  aiModel               String
+  aiTokensUsed          Int
+  aiCostCents           Int
+  aiLatencyMs           Int
+  urlToken              String   @unique
+  expiresAt             DateTime
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([urlToken])
+  @@index([expiresAt])
+}
+
+model Lead {
+  id           String   @id @default(uuid())
+  assessmentId String   @unique
+  email        String
+  isUnlocked   Boolean  @default(false)
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+}
+
+// ============================================================================
+// DOMAIN 2: System Config (Int auto-increment PKs)
+// ============================================================================
+
+model ProblemCategory {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  slug         String   @unique
+  description  String
+  iconUrl      String?
+  usageCount   Int      @default(0)
+  displayOrder Int
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Question {
+  id           Int          @id @default(autoincrement())
+  questionText String
+  questionType QuestionType
+  placeholder  String?
+  options      Json?
+  displayOrder Int
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  responses     Response[]
+  microInsights MicroInsight[]
+}
+
+model MicroInsight {
+  id              Int      @id @default(autoincrement())
+  questionId      Int
+  triggerKeywords Json
+  insightText     String
+  source          String?
+  displayOrder    Int
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id])
+}
+
+model PmfFact {
+  id              Int      @id @default(autoincrement())
+  factText        String
+  source          String?
+  displayLocation String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model SocialProof {
+  id           Int       @id @default(autoincrement())
+  quote        String
+  authorName   String
+  authorTitle  String?
+  companyName  String?
+  proofType    ProofType
+  displayOrder Int
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+}
+
+// ============================================================================
+// DOMAIN 3: Analytics/Audit (UUID PKs, append-only)
+// ============================================================================
+
+model AnalyticsEvent {
+  id           String   @id @default(uuid())
+  assessmentId String?
+  eventType    String
+  eventData    Json?
+  ipHash       String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([eventType])
+  @@index([assessmentId])
+  @@index([createdAt])
+}
+
+model ApiLog {
+  id         String   @id @default(uuid())
+  requestId  String
+  method     String
+  path       String
+  statusCode Int
+  latencyMs  Int
+  ipHash     String?
+  createdAt  DateTime @default(now())
+
+  @@index([requestId])
+  @@index([createdAt])
+}
+
+model AiLog {
+  id           String   @id @default(uuid())
+  assessmentId String?
+  provider     String   @default("openai")
+  model        String
+  promptName   String
+  inputTokens  Int
+  outputTokens Int
+  totalTokens  Int
+  costCents    Int
+  latencyMs    Int
+  success      Boolean
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@index([assessmentId])
+  @@index([createdAt])
+}
+
+model ResearchCache {
+  id          String   @id @default(uuid())
+  category    String
+  subCategory String
+  data        Json
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([category, subCategory])
+  @@index([expiresAt])
+}
