@@ -66,11 +66,11 @@ Plans:
   3. GET /api/assessments/:id returns the assessment with all responses for session restore
   4. Assessment status transitions correctly through lifecycle: started -> in_progress -> completed -> report_generated -> unlocked
   5. Creating an assessment atomically increments the selected problem category's usage count
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: Assessment CRUD service and endpoints
-- [ ] 03-02: Response storage with micro-insight matching and status lifecycle
+- [ ] 03-01-PLAN.md -- Assessment service (create with atomic category increment, session restore, status lifecycle guard), controller, router, app mount
+- [ ] 03-02-PLAN.md -- Response storage with micro-insight matching, P2002 duplicate handling, auto-transition to in_progress
 
 ### Phase 4: AI Infrastructure & Classification
 **Goal**: The centralized OpenAI client is operational with retry, cost tracking, and daily spend limits, and GPT-4o can classify founder answers into product category, sub-category, search queries, and confidence scores
@@ -178,7 +178,7 @@ Note: Phases 5 and 6 can execute in parallel (both depend on Phase 4, neither de
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Middleware | 3/3 | Complete | 2026-03-02 |
-| 2. System Content & Seed Data | 2/2 | Complete | 2026-03-02 |
+| 2. System Content & Seed Data | 2/2 | Complete    | 2026-03-02 |
 | 3. Assessment Flow | 0/2 | Not started | - |
 | 4. AI Infrastructure & Classification | 0/2 | Not started | - |
 | 5. Research Pipeline | 0/2 | Not started | - |
