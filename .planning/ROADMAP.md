@@ -53,7 +53,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- System content service layer, controller, router, and 5 GET API endpoints
+- [x] 02-01-PLAN.md -- System content service layer, controller, router, and 5 GET API endpoints
 - [ ] 02-02-PLAN.md -- Idempotent seed script for all system tables (37 records across 5 tables)
 
 ### Phase 3: Assessment Flow
@@ -178,7 +178,7 @@ Note: Phases 5 and 6 can execute in parallel (both depend on Phase 4, neither de
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Middleware | 3/3 | Complete | 2026-03-02 |
-| 2. System Content & Seed Data | 0/2 | Not started | - |
+| 2. System Content & Seed Data | 1/2 | In progress | - |
 | 3. Assessment Flow | 0/2 | Not started | - |
 | 4. AI Infrastructure & Classification | 0/2 | Not started | - |
 | 5. Research Pipeline | 0/2 | Not started | - |

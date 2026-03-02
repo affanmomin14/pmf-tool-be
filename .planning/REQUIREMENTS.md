@@ -26,11 +26,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### System Content
 
-- [ ] **SYS-01**: GET /api/system/questions returns active questions in display order with type, placeholder, and options
-- [ ] **SYS-02**: GET /api/system/categories returns active problem categories with usage counts and display order
-- [ ] **SYS-03**: GET /api/system/facts?location= returns active PMF facts filtered by display location
-- [ ] **SYS-04**: GET /api/system/social-proof returns active social proof items in display order
-- [ ] **SYS-05**: GET /api/system/micro-insights/:questionId returns insights for a specific question
+- [x] **SYS-01**: GET /api/system/questions returns active questions in display order with type, placeholder, and options
+- [x] **SYS-02**: GET /api/system/categories returns active problem categories with usage counts and display order
+- [x] **SYS-03**: GET /api/system/facts?location= returns active PMF facts filtered by display location
+- [x] **SYS-04**: GET /api/system/social-proof returns active social proof items in display order
+- [x] **SYS-05**: GET /api/system/micro-insights/:questionId returns insights for a specific question
 - [ ] **SYS-06**: Seed data populates all system tables (5 categories, 5 questions, 15+ micro-insights, 6 facts, 6 testimonials)
 
 ### Assessment Flow
@@ -162,11 +162,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIDW-01 | Phase 1 | Complete |
 | MIDW-03 | Phase 1 | Complete |
 | MIDW-04 | Phase 1 | Complete |
-| SYS-01 | Phase 2 | Pending |
-| SYS-02 | Phase 2 | Pending |
-| SYS-03 | Phase 2 | Pending |
-| SYS-04 | Phase 2 | Pending |
-| SYS-05 | Phase 2 | Pending |
+| SYS-01 | Phase 2 | Complete |
+| SYS-02 | Phase 2 | Complete |
+| SYS-03 | Phase 2 | Complete |
+| SYS-04 | Phase 2 | Complete |
+| SYS-05 | Phase 2 | Complete |
 | SYS-06 | Phase 2 | Pending |
 | ASSMT-01 | Phase 3 | Pending |
 | ASSMT-02 | Phase 3 | Pending |

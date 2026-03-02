@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Founders answer 5 questions and receive a data-backed, AI-generated PMF diagnostic report in under 15 seconds
-**Current focus:** Phase 1: Foundation & Middleware
+**Current focus:** Phase 2: System Content & Seed Data
 
 ## Current Position
 
-Phase: 1 of 9 (Foundation & Middleware) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-03-02 -- Completed 01-03 middleware stack (error handler, validation, request logger)
+Phase: 2 of 9 (System Content & Seed Data)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-03-02 -- Completed 02-01 system content API (service, controller, router, app mount)
 
-Progress: [██░░░░░░░░] 14%
+Progress: [██░░░░░░░░] 19%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 2 min
-- Total execution time: 0.08 hours
+- Total execution time: 0.10 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-middleware | 3 | 5 min | 2 min |
+| 02-system-content-seed-data | 1 | 1 min | 1 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (1 min), 01-02 (3 min), 01-03 (1 min)
+- Last 5 plans: 01-01 (1 min), 01-02 (3 min), 01-03 (1 min), 02-01 (1 min)
 - Trend: Steady
 
 *Updated after each plan completion*
@@ -51,6 +52,9 @@ Recent decisions affecting current work:
 - [01-02]: nanoid v3 for CommonJS compatibility (v4+ is ESM-only)
 - [01-03]: Error handler checks both instanceof AppError and ZodError name for dual error path coverage
 - [01-03]: Request ID uses x-request-id header if present, otherwise generates UUID for distributed tracing
+- [02-01]: Service functions return Prisma select projections (no full model exposure)
+- [02-01]: Controller handlers use { success: true, data } envelope consistently
+- [02-01]: Facts endpoint uses optional query param filtering; micro-insights uses route param
 
 ### Pending Todos
 
@@ -65,5 +69,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 01-03-PLAN.md (Phase 1 complete)
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
