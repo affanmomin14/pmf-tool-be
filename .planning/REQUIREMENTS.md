@@ -10,13 +10,13 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Foundation
 
 - [x] **FOUND-01**: Prisma schema covers all 3 data domains (assessment pipeline, system config, analytics/audit) with proper indexes, enums, cascading deletes, and UUID primary keys on app tables
-- [ ] **FOUND-02**: Environment variables validated with Zod on startup (DATABASE_URL, OPENAI_API_KEY, PORT, CORS_ORIGINS, etc.)
-- [ ] **FOUND-03**: OpenAI client singleton configured with model, max tokens, and API key from env
-- [ ] **FOUND-04**: Prisma client singleton with connection pooling and graceful shutdown
-- [ ] **FOUND-05**: Custom error classes (AppError, NotFoundError, ValidationError, RateLimitError, AIError) with HTTP status codes
-- [ ] **FOUND-06**: Token generation utility using nanoid (21 chars, URL-safe)
-- [ ] **FOUND-07**: Input sanitization utility (HTML stripping, 500-char length truncation)
-- [ ] **FOUND-08**: IP hashing utility using SHA-256 (never store raw IPs)
+- [x] **FOUND-02**: Environment variables validated with Zod on startup (DATABASE_URL, OPENAI_API_KEY, PORT, CORS_ORIGINS, etc.)
+- [x] **FOUND-03**: OpenAI client singleton configured with model, max tokens, and API key from env
+- [x] **FOUND-04**: Prisma client singleton with connection pooling and graceful shutdown
+- [x] **FOUND-05**: Custom error classes (AppError, NotFoundError, ValidationError, RateLimitError, AIError) with HTTP status codes
+- [x] **FOUND-06**: Token generation utility using nanoid (21 chars, URL-safe)
+- [x] **FOUND-07**: Input sanitization utility (HTML stripping, 500-char length truncation)
+- [x] **FOUND-08**: IP hashing utility using SHA-256 (never store raw IPs)
 
 ### Middleware
 
@@ -152,13 +152,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Complete |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
-| FOUND-05 | Phase 1 | Pending |
-| FOUND-06 | Phase 1 | Pending |
-| FOUND-07 | Phase 1 | Pending |
-| FOUND-08 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Complete |
+| FOUND-03 | Phase 1 | Complete |
+| FOUND-04 | Phase 1 | Complete |
+| FOUND-05 | Phase 1 | Complete |
+| FOUND-06 | Phase 1 | Complete |
+| FOUND-07 | Phase 1 | Complete |
+| FOUND-08 | Phase 1 | Complete |
 | MIDW-01 | Phase 1 | Pending |
 | MIDW-03 | Phase 1 | Pending |
 | MIDW-04 | Phase 1 | Pending |
