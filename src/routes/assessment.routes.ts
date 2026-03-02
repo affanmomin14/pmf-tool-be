@@ -35,4 +35,10 @@ router.post(
   ctrl.createResponse,
 );
 
+router.post(
+  '/:id/complete',
+  validate({ params: assessmentParamsSchema }),
+  ctrl.completeAssessment,
+);
+
 export default router;

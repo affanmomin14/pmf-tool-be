@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as assessmentService from '../services/assessment.service';
+import * as classificationService from '../services/classification.service';
 import { hashIp } from '../utils/hash';
 
 export const createAssessment = async (req: Request, res: Response) => {
@@ -25,4 +26,10 @@ export const createResponse = async (req: Request, res: Response) => {
     ...req.body,
   });
   res.status(201).json({ success: true, data: result });
+};
+
+export const completeAssessment = async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const classification = await classificationService.classifyAssessment(id);
+  res.json({ success: true, data: { classification } });
 };
