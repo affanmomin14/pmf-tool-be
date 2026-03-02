@@ -38,8 +38,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **ASSMT-01**: POST /api/assessments creates assessment with problem type, UTM tracking, hashed IP, and status "started"
 - [x] **ASSMT-02**: POST /api/assessments creates atomically increments the selected problem category's usage count
 - [x] **ASSMT-03**: GET /api/assessments/:id returns assessment with all responses for session restore
-- [ ] **ASSMT-04**: POST /api/assessments/:id/responses stores individual response with questionId, answer text, answer value, time spent, and question order
-- [ ] **ASSMT-05**: POST /api/assessments/:id/responses returns a matching micro-insight (text + source) from system content
+- [x] **ASSMT-04**: POST /api/assessments/:id/responses stores individual response with questionId, answer text, answer value, time spent, and question order
+- [x] **ASSMT-05**: POST /api/assessments/:id/responses returns a matching micro-insight (text + source) from system content
 - [x] **ASSMT-06**: Assessment status transitions through lifecycle: started -> in_progress -> completed -> report_generated -> unlocked
 
 ### AI Classification
@@ -171,8 +171,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASSMT-01 | Phase 3 | Complete |
 | ASSMT-02 | Phase 3 | Complete |
 | ASSMT-03 | Phase 3 | Complete |
-| ASSMT-04 | Phase 3 | Pending |
-| ASSMT-05 | Phase 3 | Pending |
+| ASSMT-04 | Phase 3 | Complete |
+| ASSMT-05 | Phase 3 | Complete |
 | ASSMT-06 | Phase 3 | Complete |
 | AICL-01 | Phase 4 | Pending |
 | AICL-02 | Phase 4 | Pending |
