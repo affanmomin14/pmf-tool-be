@@ -12,7 +12,7 @@ This roadmap delivers a production-ready backend that powers a 5-question PMF di
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation & Middleware** - Database schema, env validation, error handling, utilities, and request middleware
+- [x] **Phase 1: Foundation & Middleware** - Database schema, env validation, error handling, utilities, and request middleware
 - [ ] **Phase 2: System Content & Seed Data** - Read-only content API and seed data for questions, categories, facts, social proof, micro-insights
 - [ ] **Phase 3: Assessment Flow** - Assessment session CRUD with response storage, session restore, and status lifecycle
 - [ ] **Phase 4: AI Infrastructure & Classification** - Centralized OpenAI client, GPT-4o classification with structured output, cost tracking
@@ -39,7 +39,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01: Prisma schema and database migrations
 - [x] 01-02: Environment validation, client singletons, and utility functions
-- [ ] 01-03: Middleware stack (error handler, Zod validation factory, request logger)
+- [x] 01-03: Middleware stack (error handler, Zod validation factory, request logger)
 
 ### Phase 2: System Content & Seed Data
 **Goal**: The frontend can fetch all system content (questions, categories, facts, social proof, micro-insights) from live API endpoints backed by seeded database data
@@ -177,7 +177,7 @@ Note: Phases 5 and 6 can execute in parallel (both depend on Phase 4, neither de
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Middleware | 2/3 | In progress | - |
+| 1. Foundation & Middleware | 3/3 | Complete | 2026-03-02 |
 | 2. System Content & Seed Data | 0/2 | Not started | - |
 | 3. Assessment Flow | 0/2 | Not started | - |
 | 4. AI Infrastructure & Classification | 0/2 | Not started | - |

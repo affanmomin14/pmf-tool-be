@@ -20,9 +20,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Middleware
 
-- [ ] **MIDW-01**: Global error handler returns structured JSON errors, never stack traces in production
-- [ ] **MIDW-03**: Zod validation middleware factory for request body/params/query validation
-- [ ] **MIDW-04**: Pino HTTP request logger with request ID tracking
+- [x] **MIDW-01**: Global error handler returns structured JSON errors, never stack traces in production
+- [x] **MIDW-03**: Zod validation middleware factory for request body/params/query validation
+- [x] **MIDW-04**: Pino HTTP request logger with request ID tracking
 
 ### System Content
 
@@ -159,9 +159,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-06 | Phase 1 | Complete |
 | FOUND-07 | Phase 1 | Complete |
 | FOUND-08 | Phase 1 | Complete |
-| MIDW-01 | Phase 1 | Pending |
-| MIDW-03 | Phase 1 | Pending |
-| MIDW-04 | Phase 1 | Pending |
+| MIDW-01 | Phase 1 | Complete |
+| MIDW-03 | Phase 1 | Complete |
+| MIDW-04 | Phase 1 | Complete |
 | SYS-01 | Phase 2 | Pending |
 | SYS-02 | Phase 2 | Pending |
 | SYS-03 | Phase 2 | Pending |
