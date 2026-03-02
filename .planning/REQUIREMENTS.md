@@ -70,11 +70,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Report Generation
 
-- [ ] **RGEN-01**: POST /api/assessments/:id/complete triggers Prompt 2 (Generate Report) using GPT-4o with JSON mode, temperature 0.35, max_tokens 6000
-- [ ] **RGEN-02**: Report prompt receives founder_answers + research_findings + pre-computed scores as immutable inputs
-- [ ] **RGEN-03**: Report output is a 9-section structured JSON matching exact schema from AI-LLM PRD (header, reality_check, scorecard, market, sales_model, competitors, positioning, bottom_line, recommendations, sources)
-- [ ] **RGEN-04**: Report prompt includes explicit data anchoring ("every statistic MUST come from research_findings"), score injection constraints, section-by-section reasoning, tone enforcement, banned words list, and length constraints
-- [ ] **RGEN-05**: Report output validated with Zod schema checking structure AND content (verdict is single sentence, 5 recommendations, 7 scorecard dimensions, scores match input)
+- [x] **RGEN-01**: POST /api/assessments/:id/complete triggers Prompt 2 (Generate Report) using GPT-4o with JSON mode, temperature 0.35, max_tokens 6000
+- [x] **RGEN-02**: Report prompt receives founder_answers + research_findings + pre-computed scores as immutable inputs
+- [x] **RGEN-03**: Report output is a 9-section structured JSON matching exact schema from AI-LLM PRD (header, reality_check, scorecard, market, sales_model, competitors, positioning, bottom_line, recommendations, sources)
+- [x] **RGEN-04**: Report prompt includes explicit data anchoring ("every statistic MUST come from research_findings"), score injection constraints, section-by-section reasoning, tone enforcement, banned words list, and length constraints
+- [x] **RGEN-05**: Report output validated with Zod schema checking structure AND content (verdict is single sentence, 5 recommendations, 7 scorecard dimensions, scores match input)
 
 ### Hallucination Validation
 
@@ -191,11 +191,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCOR-04 | Phase 6 | Complete |
 | SCOR-05 | Phase 6 | Complete |
 | SCOR-06 | Phase 6 | Complete |
-| RGEN-01 | Phase 7 | Pending |
-| RGEN-02 | Phase 7 | Pending |
-| RGEN-03 | Phase 7 | Pending |
-| RGEN-04 | Phase 7 | Pending |
-| RGEN-05 | Phase 7 | Pending |
+| RGEN-01 | Phase 7 | Complete |
+| RGEN-02 | Phase 7 | Complete |
+| RGEN-03 | Phase 7 | Complete |
+| RGEN-04 | Phase 7 | Complete |
+| RGEN-05 | Phase 7 | Complete |
 | HVAL-01 | Phase 7 | Pending |
 | HVAL-02 | Phase 7 | Pending |
 | HVAL-03 | Phase 7 | Pending |
