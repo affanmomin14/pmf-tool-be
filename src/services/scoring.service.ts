@@ -1,4 +1,7 @@
-import type { ScoringInput, DimensionResult, SubScore, DimensionScores } from '../schemas/scoring.schema';
+import type { ScoringInput, DimensionResult, SubScore, DimensionScores, ScoreData } from '../schemas/scoring.schema';
+import { scoreDataSchema } from '../schemas/scoring.schema';
+import { prisma } from '../db/prisma';
+import { NotFoundError, ValidationError } from '../errors';
 
 // ============================================================================
 // Section 1: Numeric Parsing Utilities
@@ -421,4 +424,225 @@ export function identifyBreaks(
   const founderMismatch = founderDimension !== null && founderDimension !== primaryBreak;
 
   return { primaryBreak, secondaryBreak, founderMismatch, founderIdentifiedDimension: founderDimension };
+}
+
+// ============================================================================
+// Section 8: Input Assembly (private helper)
+// ============================================================================
+
+function assembleScoringInput(assessment: any): ScoringInput {
+  const classification = assessment.classificationData as any;
+  const research = assessment.researchData as any;
+  const responses = assessment.responses as Array<{
+    questionOrder: number;
+    answerText: string | null;
+    answerValue: string | null;
+  }>;
+
+  // Map responses to founder answers by questionOrder
+  const getAnswer = (order: number): string => {
+    const r = responses.find(r => r.questionOrder === order);
+    return r?.answerText || r?.answerValue || '';
+  };
+
+  // Q3 uses answerValue first (single_select) with answerText fallback
+  const q3Response = responses.find(r => r.questionOrder === 3);
+  const q3Answer = q3Response?.answerValue || q3Response?.answerText || '';
+
+  return {
+    classification: {
+      category: classification.category,
+      sub_category: classification.sub_category,
+      category_confidence: classification.category_confidence,
+      problem_type: classification.problem_type,
+      icp_specificity: classification.icp_specificity,
+      icp_extracted: classification.icp_extracted || {
+        industry: null, company_size: null, stage: null, role: null, geography: null,
+      },
+      product_signals: classification.product_signals || {
+        pricing_model: null, traction_level: 'none', maturity_stage: 'idea',
+      },
+      likely_competitors: classification.likely_competitors || [],
+    },
+    research: {
+      competitors: (research.competitors || []).map((c: any) => ({
+        name: c.name,
+        g2Rating: c.g2Rating ?? null,
+        reviewCount: c.reviewCount ?? null,
+        funding: c.funding ?? null,
+        pricingModel: c.pricingModel ?? null,
+        freeTier: c.freeTier ?? null,
+        tagline: c.tagline ?? null,
+      })),
+      market: {
+        tam: research.market?.tam ?? null,
+        sam: research.market?.sam ?? null,
+        growthRate: research.market?.growthRate ?? null,
+      },
+      complaints: (research.complaints || []).map((c: any) => ({
+        theme: c.theme,
+        percentage: c.percentage ?? null,
+      })),
+      patterns: {
+        topCompanies: research.patterns?.topCompanies ?? null,
+        gaps: research.patterns?.gaps ?? null,
+      },
+      researchQuality: research.researchQuality || 'limited',
+    },
+    founderAnswers: {
+      q1_product: getAnswer(1),
+      q2_valueSignal: getAnswer(2),
+      q3_distribution: q3Answer,
+      q4_substitute: getAnswer(4),
+      q5_biggestRisk: getAnswer(5),
+    },
+  };
+}
+
+// ============================================================================
+// Section 9: Benchmark Computation
+// ============================================================================
+
+const BENCHMARK_MIN_SAMPLE = 5;
+const BENCHMARK_DEFAULT = 70;
+
+function computeDimensionAverages(assessments: any[]): Record<string, number> {
+  const benchmarks: Record<string, number> = {};
+  for (const key of Object.keys(DIMENSION_WEIGHTS)) {
+    const scores = assessments
+      .map((a: any) => (a.scoreData as any)?.dimensions?.[key]?.score)
+      .filter((s: any): s is number => typeof s === 'number');
+    benchmarks[key] = scores.length > 0
+      ? Math.round((scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 10)
+      : BENCHMARK_DEFAULT;
+  }
+  return benchmarks;
+}
+
+async function computeBenchmarks(
+  category: string,
+  subCategory: string,
+): Promise<{ benchmarks: Record<string, number>; meta: { source: 'category_subcategory' | 'category_only' | 'default'; sampleSize: number } }> {
+  // Fetch assessments that have scoreData
+  const assessments = await prisma.assessment.findMany({
+    where: {
+      scoreData: { not: null as any },
+      classificationData: { not: null as any },
+    },
+    select: { classificationData: true, scoreData: true },
+  });
+
+  // Filter by category + sub_category (application-level -- Prisma JSON AND is limited)
+  const exactMatches = assessments.filter((a: any) => {
+    const cd = a.classificationData as any;
+    return cd?.category === category && cd?.sub_category === subCategory;
+  });
+
+  // Try exact match first
+  if (exactMatches.length >= BENCHMARK_MIN_SAMPLE) {
+    return {
+      benchmarks: computeDimensionAverages(exactMatches),
+      meta: { source: 'category_subcategory', sampleSize: exactMatches.length },
+    };
+  }
+
+  // Fallback: category-only
+  const categoryMatches = assessments.filter((a: any) => {
+    const cd = a.classificationData as any;
+    return cd?.category === category;
+  });
+
+  if (categoryMatches.length >= BENCHMARK_MIN_SAMPLE) {
+    return {
+      benchmarks: computeDimensionAverages(categoryMatches),
+      meta: { source: 'category_only', sampleSize: categoryMatches.length },
+    };
+  }
+
+  // Default: 70 per dimension
+  const defaults: Record<string, number> = {};
+  for (const key of Object.keys(DIMENSION_WEIGHTS)) {
+    defaults[key] = BENCHMARK_DEFAULT;
+  }
+  return {
+    benchmarks: defaults,
+    meta: { source: 'default', sampleSize: 0 },
+  };
+}
+
+// ============================================================================
+// Section 10: Score Assessment Orchestrator (main export)
+// ============================================================================
+
+export async function scoreAssessment(assessmentId: string): Promise<ScoreData> {
+  // 1. Fetch assessment with all data needed for scoring
+  const assessment = await prisma.assessment.findUnique({
+    where: { id: assessmentId },
+    include: { responses: { orderBy: { questionOrder: 'asc' } } },
+  });
+  if (!assessment) throw new NotFoundError('Assessment not found');
+
+  // 2. Validate prerequisites
+  if (!assessment.classificationData) {
+    throw new ValidationError('Assessment must be classified before scoring');
+  }
+  if (!assessment.researchData) {
+    throw new ValidationError('Assessment must have research data before scoring');
+  }
+
+  // 3. Assemble scoring input (pure data object from DB data)
+  const input = assembleScoringInput(assessment);
+
+  // 4. Score all 7 dimensions (pure functions, no side effects)
+  const dimensions: DimensionScores = {
+    demand: scoreDemand(input),
+    icpFocus: scoreIcpFocus(input),
+    differentiation: scoreDifferentiation(input),
+    distributionFit: scoreDistributionFit(input),
+    problemSeverity: scoreProblemSeverity(input),
+    competitivePosition: scoreCompetitivePosition(input),
+    trustAndProof: scoreTrustAndProof(input),
+  };
+
+  // 5. Compute final score
+  const { rawWeightedSum, finalScore } = computeFinalScore(dimensions);
+
+  // 6. Derive stage
+  const pmfStage = deriveStage(finalScore);
+
+  // 7. Identify breaks with Q4 cross-reference
+  const breaks = identifyBreaks(dimensions, input.classification.problem_type);
+
+  // 8. Compute benchmarks
+  const { benchmarks, meta: benchmarkMeta } = await computeBenchmarks(
+    input.classification.category,
+    input.classification.sub_category,
+  );
+
+  // 9. Assemble scoreData
+  const scoreData: ScoreData = {
+    dimensions,
+    weights: { ...DIMENSION_WEIGHTS },
+    rawWeightedSum,
+    finalScore,
+    pmfStage,
+    ...breaks,
+    benchmarks,
+    benchmarkMeta,
+    scoredAt: new Date().toISOString(),
+  };
+
+  // 10. Validate with Zod
+  const validated = scoreDataSchema.safeParse(scoreData);
+  if (!validated.success) {
+    throw new ValidationError(`Score data failed validation: ${validated.error.message}`);
+  }
+
+  // 11. Store in assessment
+  await prisma.assessment.update({
+    where: { id: assessmentId },
+    data: { scoreData: validated.data as any },
+  });
+
+  return validated.data;
 }
