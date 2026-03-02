@@ -50,11 +50,11 @@ Plans:
   2. GET /api/system/categories returns active problem categories with usage counts
   3. GET /api/system/facts, /social-proof, and /micro-insights endpoints return seeded content filtered by location and question
   4. Seed script populates all system tables (5 categories, 5 questions, 15+ micro-insights, 6 facts, 6 testimonials) and is idempotent
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: System content service and API endpoints
-- [ ] 02-02: Seed data script with all system tables populated
+- [ ] 02-01-PLAN.md -- System content service layer, controller, router, and 5 GET API endpoints
+- [ ] 02-02-PLAN.md -- Idempotent seed script for all system tables (37 records across 5 tables)
 
 ### Phase 3: Assessment Flow
 **Goal**: A founder can start an assessment, submit responses to each question, restore a session, and receive micro-insights -- establishing the session model the AI pipeline operates on
