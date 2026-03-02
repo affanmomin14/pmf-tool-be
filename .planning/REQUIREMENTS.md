@@ -61,12 +61,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Scoring
 
-- [ ] **SCOR-01**: 7-dimension scoring algorithm implemented as pure functions in TypeScript (no LLM involvement)
-- [ ] **SCOR-02**: Each dimension scored 1-10 using exact rules from AI-LLM PRD: Demand (0.18), ICP Focus (0.15), Differentiation (0.15), Distribution Fit (0.16), Problem Severity (0.14), Competitive Position (0.14), Trust & Proof (0.08)
-- [ ] **SCOR-03**: Final PMF score = round(weighted sum x 10), range 0-100
-- [ ] **SCOR-04**: PMF stage derived from score: 0-35 pre_pmf, 36-60 approaching, 61-80 early_pmf, 81-100 strong
-- [ ] **SCOR-05**: Primary break = lowest scoring dimension; if Q4 maps to different dimension, flag both
-- [ ] **SCOR-06**: Benchmark defaults to 70; uses category average from past assessments if available
+- [x] **SCOR-01**: 7-dimension scoring algorithm implemented as pure functions in TypeScript (no LLM involvement)
+- [x] **SCOR-02**: Each dimension scored 1-10 using exact rules from AI-LLM PRD: Demand (0.18), ICP Focus (0.15), Differentiation (0.15), Distribution Fit (0.16), Problem Severity (0.14), Competitive Position (0.14), Trust & Proof (0.08)
+- [x] **SCOR-03**: Final PMF score = round(weighted sum x 10), range 0-100
+- [x] **SCOR-04**: PMF stage derived from score: 0-35 pre_pmf, 36-60 approaching, 61-80 early_pmf, 81-100 strong
+- [x] **SCOR-05**: Primary break = lowest scoring dimension; if Q4 maps to different dimension, flag both
+- [x] **SCOR-06**: Benchmark defaults to 70; uses category average from past assessments if available
 
 ### Report Generation
 
@@ -185,12 +185,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RES-04 | Phase 5 | Complete |
 | RES-05 | Phase 5 | Complete |
 | RES-06 | Phase 5 | Complete |
-| SCOR-01 | Phase 6 | Pending |
-| SCOR-02 | Phase 6 | Pending |
-| SCOR-03 | Phase 6 | Pending |
-| SCOR-04 | Phase 6 | Pending |
-| SCOR-05 | Phase 6 | Pending |
-| SCOR-06 | Phase 6 | Pending |
+| SCOR-01 | Phase 6 | Complete |
+| SCOR-02 | Phase 6 | Complete |
+| SCOR-03 | Phase 6 | Complete |
+| SCOR-04 | Phase 6 | Complete |
+| SCOR-05 | Phase 6 | Complete |
+| SCOR-06 | Phase 6 | Complete |
 | RGEN-01 | Phase 7 | Pending |
 | RGEN-02 | Phase 7 | Pending |
 | RGEN-03 | Phase 7 | Pending |
