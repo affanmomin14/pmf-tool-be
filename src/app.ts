@@ -7,6 +7,7 @@ import { errorHandler } from './middlewares/error.middleware';
 import systemRoutes from './routes/system.routes';
 import assessmentRoutes from './routes/assessment.routes';
 import reportRoutes from './routes/report.routes';
+import leadRoutes from './routes/lead.routes';
 
 export const app = express();
 
@@ -31,6 +32,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/system', systemRoutes);
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/leads', leadRoutes);
 
 // Error handler (MUST be LAST middleware - after all routes)
 app.use(errorHandler);
