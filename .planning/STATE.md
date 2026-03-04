@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T10:58:37.710Z"
+last_updated: "2026-03-04T04:15:31Z"
 progress:
   total_phases: 9
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 17
-  completed_plans: 14
+  completed_plans: 17
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Founders answer 5 questions and receive a data-backed, AI-generated PMF diagnostic report in under 15 seconds
-**Current focus:** Phase 7: Report Generation & Validation -- IN PROGRESS
+**Current focus:** Phase 8: Pipeline Orchestration & Report Access -- IN PROGRESS
 
 ## Current Position
 
-Phase: 7 of 9 (Report Generation & Validation)
-Plan: 1 of 2 in current phase (07-01 complete)
-Status: Completed 07-01 report generation service, ready for 07-02
-Last activity: 2026-03-02 -- Completed 07-01 report generation service
+Phase: 8 of 9 (Pipeline Orchestration & Report Access) -- IN PROGRESS
+Plan: 2 of 3 in current phase (08-01, 08-02 complete)
+Status: Completed 08-02 report access endpoints, continuing with 08-03
+Last activity: 2026-03-04 -- Completed 08-02 report access endpoints
 
-Progress: [█████████████░] 82% (14/17 plans)
+Progress: [████████████████] 100% (17/17 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 17
 - Average duration: 2 min
-- Total execution time: 0.42 hours
+- Total execution time: 0.45 hours
 
 **By Phase:**
 
@@ -48,13 +48,16 @@ Progress: [█████████████░] 82% (14/17 plans)
 | 06-scoring-engine | 2/2 | 5 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (4 min), 05-02 (1 min), 06-01 (3 min), 06-02 (2 min), 07-01 (3 min)
+- Last 5 plans: 06-02 (2 min), 07-01 (3 min), 07-02 (2 min), 08-01 (2 min), 08-02 (1 min)
 - Trend: Steady
 
 *Updated after each plan completion*
 | Phase 06-scoring-engine P01 | 3 min | 2 tasks | 3 files |
 | Phase 06-scoring-engine P02 | 2 min | 2 tasks | 3 files |
 | Phase 07-report-generation-validation P01 | 3 min | 2 tasks | 2 files |
+| Phase 07-report-generation-validation P02 | 2 min | 2 tasks | 1 files |
+| Phase 08-pipeline-orchestration-report-access P01 | 2 min | 2 tasks | 2 files |
+| Phase 08-pipeline-orchestration-report-access P02 | 1 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -103,6 +106,14 @@ Recent decisions affecting current work:
 - [Phase 06-scoring-engine]: Application-level JSON filtering for benchmarks; orchestrator does NOT change status (Phase 8 handles)
 - [07-01]: Content validation checks scorecard scores match input exactly (not just structure)
 - [07-01]: Correction function appends flags to user message rather than modifying system prompt
+- [07-02]: All 5 hallucination checks are pure functions (no async, no DB, no LLM) for testability and speed
+- [07-02]: Only error-severity flags from checks 1-3 count toward retry threshold; banned words and verdict are auto-fixed
+- [07-02]: Best-attempt tracking across retries ensures worst case returns most-corrected version
+- [08-01]: ScoreData->ScoringInput transformation uses scoreToLabel (<=3 critical, <=5 weak, <=6 moderate, <=8 solid, else strong)
+- [08-01]: Pipeline allows retry from completed status (skips classification, proceeds from research)
+- [08-01]: Preview content extracts pmfScore, pmfStage, verdict, top 2 strengths, primaryBreak
+- [08-02]: Separate report.access.service.ts from report.service.ts to avoid collision with generation service
+- [08-02]: Three distinct response shapes: expired (null report + preview), locked (preview + score/stage), unlocked (full content + all metadata)
 
 ### Pending Todos
 
@@ -116,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-04
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None

@@ -78,26 +78,26 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Hallucination Validation
 
-- [ ] **HVAL-01**: Extract all numbers from report text and verify against research_findings and founder_answers; flag unmatched numbers (allowlist: dimension scores and PMF score)
-- [ ] **HVAL-02**: Extract company names from report and verify against research_findings.competitors list; flag unknown companies
-- [ ] **HVAL-03**: Check score-text consistency (text says "strong" for score <=3 or "weak" for score >=8 = contradiction)
-- [ ] **HVAL-04**: Verify verdict is single sentence; truncate if multi-sentence
-- [ ] **HVAL-05**: Run banned word regex against all text fields; auto-replace with neutral alternatives
-- [ ] **HVAL-06**: If >3 flags, regenerate report with correction prompt; max 2 retries; after that use best attempt and flag for review
+- [x] **HVAL-01**: Extract all numbers from report text and verify against research_findings and founder_answers; flag unmatched numbers (allowlist: dimension scores and PMF score)
+- [x] **HVAL-02**: Extract company names from report and verify against research_findings.competitors list; flag unknown companies
+- [x] **HVAL-03**: Check score-text consistency (text says "strong" for score <=3 or "weak" for score >=8 = contradiction)
+- [x] **HVAL-04**: Verify verdict is single sentence; truncate if multi-sentence
+- [x] **HVAL-05**: Run banned word regex against all text fields; auto-replace with neutral alternatives
+- [x] **HVAL-06**: If >3 flags, regenerate report with correction prompt; max 2 retries; after that use best attempt and flag for review
 
 ### Pipeline Orchestration
 
-- [ ] **PIPE-01**: Full pipeline (classify -> research -> score -> generate -> validate) completes in under 15 seconds
-- [ ] **PIPE-02**: Classification and research run with maximum parallelism where data dependencies allow
-- [ ] **PIPE-03**: Pipeline stores report with: full JSON content, 7-dimension scores, preview content (2-3 insights), intermediate artifacts, PDF URL placeholder, PMF score, PMF stage, primary break, AI metadata (model, tokens, cost, latency), unique URL token, 90-day expiry
-- [ ] **PIPE-04**: POST /api/assessments/:id/complete returns { reportToken, previewContent, pmfScore, pmfStage }
+- [x] **PIPE-01**: Full pipeline (classify -> research -> score -> generate -> validate) completes in under 15 seconds
+- [x] **PIPE-02**: Classification and research run with maximum parallelism where data dependencies allow
+- [x] **PIPE-03**: Pipeline stores report with: full JSON content, 7-dimension scores, preview content (2-3 insights), intermediate artifacts, PDF URL placeholder, PMF score, PMF stage, primary break, AI metadata (model, tokens, cost, latency), unique URL token, 90-day expiry
+- [x] **PIPE-04**: POST /api/assessments/:id/complete returns { reportToken, previewContent, pmfScore, pmfStage }
 
 ### Report Access
 
-- [ ] **RPT-01**: GET /api/reports/:token returns full report if lead.isUnlocked = true
-- [ ] **RPT-02**: GET /api/reports/:token returns previewContent only + blurred placeholder if not unlocked
-- [ ] **RPT-03**: GET /api/reports/:token checks 90-day expiry and returns isExpired flag
-- [ ] **RPT-04**: Report tokens are nanoid (21 chars, URL-safe), unique indexed
+- [x] **RPT-01**: GET /api/reports/:token returns full report if lead.isUnlocked = true
+- [x] **RPT-02**: GET /api/reports/:token returns previewContent only + blurred placeholder if not unlocked
+- [x] **RPT-03**: GET /api/reports/:token checks 90-day expiry and returns isExpired flag
+- [x] **RPT-04**: Report tokens are nanoid (21 chars, URL-safe), unique indexed
 
 ### Email Gate & Lead
 
@@ -196,20 +196,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RGEN-03 | Phase 7 | Complete |
 | RGEN-04 | Phase 7 | Complete |
 | RGEN-05 | Phase 7 | Complete |
-| HVAL-01 | Phase 7 | Pending |
-| HVAL-02 | Phase 7 | Pending |
-| HVAL-03 | Phase 7 | Pending |
-| HVAL-04 | Phase 7 | Pending |
-| HVAL-05 | Phase 7 | Pending |
-| HVAL-06 | Phase 7 | Pending |
-| PIPE-01 | Phase 8 | Pending |
-| PIPE-02 | Phase 8 | Pending |
-| PIPE-03 | Phase 8 | Pending |
-| PIPE-04 | Phase 8 | Pending |
-| RPT-01 | Phase 8 | Pending |
-| RPT-02 | Phase 8 | Pending |
-| RPT-03 | Phase 8 | Pending |
-| RPT-04 | Phase 8 | Pending |
+| HVAL-01 | Phase 7 | Complete |
+| HVAL-02 | Phase 7 | Complete |
+| HVAL-03 | Phase 7 | Complete |
+| HVAL-04 | Phase 7 | Complete |
+| HVAL-05 | Phase 7 | Complete |
+| HVAL-06 | Phase 7 | Complete |
+| PIPE-01 | Phase 8 | Complete |
+| PIPE-02 | Phase 8 | Complete |
+| PIPE-03 | Phase 8 | Complete |
+| PIPE-04 | Phase 8 | Complete |
+| RPT-01 | Phase 8 | Complete |
+| RPT-02 | Phase 8 | Complete |
+| RPT-03 | Phase 8 | Complete |
+| RPT-04 | Phase 8 | Complete |
 | LEAD-01 | Phase 8 | Pending |
 | LEAD-02 | Phase 8 | Pending |
 | LEAD-03 | Phase 8 | Pending |
