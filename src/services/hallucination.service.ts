@@ -379,7 +379,7 @@ export async function validateReport(params: {
     params.founderAnswers,
   );
 
-  if (errorCount <= 3) {
+  if (errorCount <= 5) {
     return { report: fixedReport, flags: allFlags, needsReview: false, attempts: 1 };
   }
 
@@ -391,7 +391,7 @@ export async function validateReport(params: {
   // Retry loop
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     console.warn(
-      `[hallucination] Retry ${attempt}/${maxRetries} -- ${errorCount} error flags exceed threshold of 3`,
+      `[hallucination] Retry ${attempt}/${maxRetries} -- ${errorCount} error flags exceed threshold of 5`,
     );
 
     // Convert error flags to strings for the correction prompt
@@ -427,7 +427,7 @@ export async function validateReport(params: {
       bestErrorCount = errorCount;
     }
 
-    if (errorCount <= 3) {
+    if (errorCount <= 5) {
       return { report: fixedReport, flags: allFlags, needsReview: false, attempts: attempt + 1 };
     }
   }

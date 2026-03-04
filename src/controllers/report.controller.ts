@@ -50,7 +50,12 @@ export const emailReport = async (req: Request, res: Response) => {
       pmfStage: report.pmfStage,
       primaryBreak: report.primaryBreak,
       content: report.content as Record<string, any>,
-      scores: report.scores as Array<{ name: string; score: number; weight: number; verdict: string }>,
+      scores: (content.scorecard || []).map((s: any) => ({
+        name: s.dimension,
+        score: s.score,
+        weight: 0,
+        verdict: s.label || s.insight || '',
+      })),
     },
   });
 

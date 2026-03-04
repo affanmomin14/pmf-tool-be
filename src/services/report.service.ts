@@ -149,7 +149,7 @@ export async function generateReport(params: {
     ],
     responseFormat: reportResponseFormat,
     temperature: 0.35,
-    maxTokens: 6000,
+    maxTokens: 4000,
   });
 
   // Parse JSON
@@ -199,7 +199,7 @@ export async function generateReportWithCorrections(
     ],
     responseFormat: reportResponseFormat,
     temperature: 0.35,
-    maxTokens: 6000,
+    maxTokens: 4000,
   });
 
   // Parse JSON

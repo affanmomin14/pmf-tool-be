@@ -176,11 +176,11 @@ export async function callOpenAIWebSearch(params: {
 
   try {
     // 2. Build Responses API call
-    // When textFormat is provided (parse step), omit tools (no web search).
-    // When textFormat is NOT provided (search step), include web_search_preview tool.
-    const tools = params.textFormat
-      ? undefined
-      : [{ type: 'web_search_preview' as const, search_context_size: params.searchContextSize || 'medium' }];
+    // When searchContextSize is provided, include web_search_preview tool (even with textFormat).
+    // When only textFormat is provided (no search), omit tools.
+    const tools = params.searchContextSize || !params.textFormat
+      ? [{ type: 'web_search_preview' as const, search_context_size: params.searchContextSize || 'medium' }]
+      : undefined;
 
     const text = params.textFormat ? { format: params.textFormat } : undefined;
 
