@@ -1,10 +1,9 @@
 services:
   - type: web
     name: pmf-tool-be
-    runtime: node
+    runtime: docker
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
@@ -22,5 +21,3 @@ services:
         sync: false
       - key: RESEND_FROM_EMAIL
         sync: false
-      - key: PUPPETEER_EXECUTABLE_PATH
-        value: /usr/bin/google-chrome-stable
