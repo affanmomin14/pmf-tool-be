@@ -1,6 +1,10 @@
 import { PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import dns from 'node:dns';
+
+// Force IPv4 DNS resolution (Render free tier doesn't support IPv6)
+dns.setDefaultResultOrder('ipv4first');
 
 type PrismaInstance = InstanceType<typeof PrismaClient>;
 
