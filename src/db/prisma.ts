@@ -7,9 +7,20 @@ type PrismaInstance = InstanceType<typeof PrismaClient>;
 const globalForPrisma = globalThis as unknown as { prisma: PrismaInstance | undefined };
 
 function createClient(): PrismaInstance {
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
   const adapter = new PrismaPg(pool);
-  return new PrismaClient({ adapter }) as unknown as PrismaInstance;
+  return new PrismaClient({
+    adapter,
+    transactionOptions: {
+      maxWait: 10000,
+      timeout: 15000,
+    },
+  }) as unknown as PrismaInstance;
 }
 
 export const prisma: PrismaInstance =
