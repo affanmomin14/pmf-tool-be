@@ -101,9 +101,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Email Gate & Lead
 
-- [ ] **LEAD-01**: POST /api/leads accepts { assessmentId, email }, validates email with Zod + MX record check
-- [ ] **LEAD-02**: POST /api/leads creates lead record, marks assessment as "unlocked", returns { leadId, isUnlocked: true, reportToken }
-- [ ] **LEAD-03**: Lead email is indexed for lookups; UTM attribution stored on lead separately from assessment
+- [x] **LEAD-01**: POST /api/leads accepts { assessmentId, email }, validates email with Zod + MX record check
+- [x] **LEAD-02**: POST /api/leads creates lead record, marks assessment as "unlocked", returns { leadId, isUnlocked: true, reportToken }
+- [x] **LEAD-03**: Lead email is indexed for lookups; UTM attribution stored on lead separately from assessment
 
 ### PDF Generation
 
@@ -210,9 +210,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RPT-02 | Phase 8 | Complete |
 | RPT-03 | Phase 8 | Complete |
 | RPT-04 | Phase 8 | Complete |
-| LEAD-01 | Phase 8 | Pending |
-| LEAD-02 | Phase 8 | Pending |
-| LEAD-03 | Phase 8 | Pending |
+| LEAD-01 | Phase 8 | Complete |
+| LEAD-02 | Phase 8 | Complete |
+| LEAD-03 | Phase 8 | Complete |
 | PDF-01 | Phase 9 | Pending |
 | PDF-02 | Phase 9 | Pending |
 | PDF-03 | Phase 9 | Pending |
