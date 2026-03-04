@@ -22,9 +22,9 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Install dependencies
+# Install all dependencies (including dev for build)
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm install prisma typescript @types/node @types/express @types/cors @types/pg
+RUN npm ci
 
 # Copy source and build
 COPY prisma ./prisma
