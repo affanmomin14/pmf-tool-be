@@ -6,6 +6,7 @@ import { requestLogger } from './middlewares/requestLogger.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import systemRoutes from './routes/system.routes';
 import assessmentRoutes from './routes/assessment.routes';
+import reportRoutes from './routes/report.routes';
 
 export const app = express();
 
@@ -29,6 +30,7 @@ app.get('/health', (_req, res) => {
 // Routes
 app.use('/api/system', systemRoutes);
 app.use('/api/assessments', assessmentRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Error handler (MUST be LAST middleware - after all routes)
 app.use(errorHandler);
