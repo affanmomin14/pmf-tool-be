@@ -28,6 +28,7 @@
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "puppeteer": "^24.37.5",
+    "resend": "^6.9.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {

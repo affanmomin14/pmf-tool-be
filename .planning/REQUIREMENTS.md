@@ -107,10 +107,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### PDF Generation
 
-- [ ] **PDF-01**: PDF service generates consulting-quality PDF from report data using Puppeteer
-- [ ] **PDF-02**: PDF template includes cover page, sections with severity badges, data tables, footer with branding
-- [ ] **PDF-03**: PDF file named PMF-Insight-Report-[YYYY-MM-DD].pdf
-- [ ] **PDF-04**: Puppeteer uses shared browser instance (singleton) to manage memory (~300MB per Chromium)
+- [x] **PDF-01**: PDF service generates consulting-quality PDF from report data using Puppeteer
+- [x] **PDF-02**: PDF template includes cover page, sections with severity badges, data tables, footer with branding
+- [x] **PDF-03**: PDF file named PMF-Insight-Report-[YYYY-MM-DD].pdf
+- [x] **PDF-04**: Puppeteer uses shared browser instance (singleton) to manage memory (~300MB per Chromium)
 
 ### Email Delivery
 
@@ -213,10 +213,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEAD-01 | Phase 8 | Complete |
 | LEAD-02 | Phase 8 | Complete |
 | LEAD-03 | Phase 8 | Complete |
-| PDF-01 | Phase 9 | Pending |
-| PDF-02 | Phase 9 | Pending |
-| PDF-03 | Phase 9 | Pending |
-| PDF-04 | Phase 9 | Pending |
+| PDF-01 | Phase 9 | Complete |
+| PDF-02 | Phase 9 | Complete |
+| PDF-03 | Phase 9 | Complete |
+| PDF-04 | Phase 9 | Complete |
 | EMAIL-01 | Phase 9 | Pending |
 | EMAIL-02 | Phase 9 | Pending |
 | EMAIL-03 | Phase 9 | Pending |

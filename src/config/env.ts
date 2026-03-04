@@ -11,6 +11,9 @@ const envSchema = z.object({
   OPENAI_MAX_TOKENS: z.coerce.number().default(6000),
   DAILY_SPEND_LIMIT_CENTS: z.coerce.number().default(5000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  RESEND_API_KEY: z.string().min(1),
+  RESEND_FROM_EMAIL: z.string().email().default('onboarding@resend.dev'),
+  FRONTEND_URL: z.url().default('http://localhost:3000'),
 });
 
 export type Env = z.infer<typeof envSchema>;
