@@ -66,7 +66,7 @@ export async function callOpenAI(params: {
   try {
     // 2. Call OpenAI with SDK built-in retry and timeout
     // maxRetries: 1 = 1 retry (2 total attempts). SDK handles 429, 500, timeouts with exponential backoff.
-    // timeout: 10_000 = 10 second timeout per request
+    // timeout: 120_000 = 120 second timeout per request (report generation needs long responses)
     const response = await openai.chat.completions.create(
       {
         model,
@@ -76,7 +76,7 @@ export async function callOpenAI(params: {
         max_tokens: params.maxTokens ?? env.OPENAI_MAX_TOKENS,
       },
       {
-        timeout: 10_000,
+        timeout: 120_000,
         maxRetries: 1,
       },
     );
