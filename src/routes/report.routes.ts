@@ -9,6 +9,11 @@ const reportTokenParamsSchema = z.object({
   token: z.string().min(1).max(30),
 });
 
+const emailBodySchema = z.object({
+  email: z.email(),
+});
+
 router.get('/:token', validate({ params: reportTokenParamsSchema }), ctrl.getReport);
+router.post('/:token/email', validate({ params: reportTokenParamsSchema, body: emailBodySchema }), ctrl.emailReport);
 
 export default router;
