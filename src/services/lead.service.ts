@@ -51,25 +51,21 @@ export async function createLead(data: { assessmentId: string; email: string }) 
     };
   }
 
-  // 4. Create lead + unlock atomically
-  const lead = await prisma.$transaction(async (tx) => {
-    const newLead = await tx.lead.create({
-      data: {
-        assessmentId: data.assessmentId,
-        email: data.email,
-        isUnlocked: true,
-        utmSource: assessment.utmSource,
-        utmMedium: assessment.utmMedium,
-        utmCampaign: assessment.utmCampaign,
-      },
-    });
+  // 4. Create lead + unlock
+  const lead = await prisma.lead.create({
+    data: {
+      assessmentId: data.assessmentId,
+      email: data.email,
+      isUnlocked: true,
+      utmSource: assessment.utmSource,
+      utmMedium: assessment.utmMedium,
+      utmCampaign: assessment.utmCampaign,
+    },
+  });
 
-    await tx.assessment.update({
-      where: { id: data.assessmentId },
-      data: { status: 'unlocked' },
-    });
-
-    return newLead;
+  await prisma.assessment.update({
+    where: { id: data.assessmentId },
+    data: { status: 'unlocked' },
   });
 
   // 5. Return

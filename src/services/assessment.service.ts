@@ -29,36 +29,34 @@ export const createAssessment = async (data: {
 }) => {
   const slug = PROBLEM_TYPE_TO_SLUG[data.problemType];
 
-  return prisma.$transaction(async (tx) => {
-    // Increment category usage count if category exists
-    const category = await tx.problemCategory.findFirst({
-      where: { slug },
-    });
+  // Increment category usage count (non-critical, no transaction needed)
+  const category = await prisma.problemCategory.findFirst({
+    where: { slug },
+  });
 
-    if (category) {
-      await tx.problemCategory.update({
-        where: { id: category.id },
-        data: { usageCount: { increment: 1 } },
-      });
-    }
-
-    // Create assessment with status 'started'
-    return tx.assessment.create({
-      data: {
-        problemType: data.problemType,
-        utmSource: data.utmSource,
-        utmMedium: data.utmMedium,
-        utmCampaign: data.utmCampaign,
-        ipHash: data.ipHash,
-        status: 'started',
-      },
-      select: {
-        id: true,
-        problemType: true,
-        status: true,
-        createdAt: true,
-      },
+  if (category) {
+    await prisma.problemCategory.update({
+      where: { id: category.id },
+      data: { usageCount: { increment: 1 } },
     });
+  }
+
+  // Create assessment with status 'started'
+  return prisma.assessment.create({
+    data: {
+      problemType: data.problemType,
+      utmSource: data.utmSource,
+      utmMedium: data.utmMedium,
+      utmCampaign: data.utmCampaign,
+      ipHash: data.ipHash,
+      status: 'started',
+    },
+    select: {
+      id: true,
+      problemType: true,
+      status: true,
+      createdAt: true,
+    },
   });
 };
 
