@@ -1,12 +1,19 @@
 import { PrismaClient } from '../generated/prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 
 type PrismaInstance = InstanceType<typeof PrismaClient>;
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaInstance | undefined };
 
-// Prisma v7 reads datasource URL from prisma.config.ts at runtime
+function createClient(): PrismaInstance {
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
+  return new PrismaClient({ adapter }) as unknown as PrismaInstance;
+}
+
 export const prisma: PrismaInstance =
-  globalForPrisma.prisma ?? (new (PrismaClient as unknown as new () => PrismaInstance)());
+  globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;

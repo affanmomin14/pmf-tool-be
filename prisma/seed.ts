@@ -1,7 +1,12 @@
+import 'dotenv/config';
 import { PrismaClient, QuestionType, ProofType } from '../src/generated/prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 
 type PrismaInstance = InstanceType<typeof PrismaClient>;
-const prisma: PrismaInstance = new (PrismaClient as unknown as new () => PrismaInstance)();
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma: PrismaInstance = new PrismaClient({ adapter }) as unknown as PrismaInstance;
 
 // ---------------------------------------------------------------------------
 // 1. Problem Categories (5 records)

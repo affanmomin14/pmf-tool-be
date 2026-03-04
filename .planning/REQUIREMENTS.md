@@ -114,9 +114,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Email Delivery
 
-- [ ] **EMAIL-01**: POST /api/reports/:token/email sends report delivery email via Resend
-- [ ] **EMAIL-02**: Email subject "Your PMF Insights Report is Ready", HTML body with report summary + link to full report
-- [ ] **EMAIL-03**: Email attaches PDF if available
+- [x] **EMAIL-01**: POST /api/reports/:token/email sends report delivery email via Resend
+- [x] **EMAIL-02**: Email subject "Your PMF Insights Report is Ready", HTML body with report summary + link to full report
+- [x] **EMAIL-03**: Email attaches PDF if available
 
 ## v2 Requirements
 
@@ -217,9 +217,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PDF-02 | Phase 9 | Complete |
 | PDF-03 | Phase 9 | Complete |
 | PDF-04 | Phase 9 | Complete |
-| EMAIL-01 | Phase 9 | Pending |
-| EMAIL-02 | Phase 9 | Pending |
-| EMAIL-03 | Phase 9 | Pending |
+| EMAIL-01 | Phase 9 | Complete |
+| EMAIL-02 | Phase 9 | Complete |
+| EMAIL-03 | Phase 9 | Complete |
 
 **Coverage:**
 - v1 requirements: 69 total
