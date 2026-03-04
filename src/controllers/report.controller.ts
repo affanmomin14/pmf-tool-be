@@ -16,6 +16,7 @@ export const emailReport = async (req: Request, res: Response) => {
 
   const report = await prisma.report.findUnique({
     where: { urlToken: token },
+    include: { assessment: { include: { lead: { select: { isUnlocked: true } } } } },
   });
 
   if (!report) {
@@ -24,6 +25,10 @@ export const emailReport = async (req: Request, res: Response) => {
 
   if (report.expiresAt < new Date()) {
     throw new AppError('Report has expired', 410, 'REPORT_EXPIRED');
+  }
+
+  if (!report.assessment?.lead?.isUnlocked) {
+    throw new AppError('Report is locked — submit email via /api/leads first', 403, 'REPORT_LOCKED');
   }
 
   // Extract verdict from report content JSON
