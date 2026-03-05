@@ -13,18 +13,18 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaInstance | unde
 function createClient(): PrismaInstance {
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    max: 5,
-    idleTimeoutMillis: 30000,
+    max: 3,
+    min: 0,
+    idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 10000,
+    allowExitOnIdle: true,
   });
+
+  // Evict dead connections so they don't poison the pool after hibernation
+  pool.on('error', () => {});
+
   const adapter = new PrismaPg(pool);
-  return new PrismaClient({
-    adapter,
-    transactionOptions: {
-      maxWait: 10000,
-      timeout: 15000,
-    },
-  }) as unknown as PrismaInstance;
+  return new PrismaClient({ adapter }) as unknown as PrismaInstance;
 }
 
 export const prisma: PrismaInstance =
