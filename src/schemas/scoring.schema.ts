@@ -43,6 +43,14 @@ export const scoringInputSchema = z.object({
       traction_level: z.enum(['none', 'early', 'growing', 'established']),
       maturity_stage: z.enum(['idea', 'mvp', 'beta', 'launched', 'scaling']),
     }),
+    business_model: z.enum(['b2b_saas', 'marketplace', 'agency', 'consumer', 'hardware', 'other']),
+    traction_metrics: z.object({
+      mrr: z.nullable(z.number()),
+      arr: z.nullable(z.number()),
+      user_count: z.nullable(z.number()),
+      growth_rate: z.nullable(z.number()),
+      months_active: z.nullable(z.number()),
+    }),
     likely_competitors: z.array(z.string()),
   }),
   research: z.object({
@@ -72,14 +80,22 @@ export const scoringInputSchema = z.object({
       }))),
       gaps: z.nullable(z.array(z.string())),
     }),
-    researchQuality: z.enum(['sufficient', 'limited']),
+    researchQuality: z.union([
+      z.enum(['sufficient', 'limited']),
+      z.object({
+        overall: z.enum(['rich', 'sufficient', 'thin', 'minimal']),
+        competitorCount: z.number().int(),
+        hasMarketData: z.boolean(),
+        complaintCount: z.number().int(),
+      }),
+    ]),
   }),
   founderAnswers: z.object({
     q1_product: z.string(),
-    q2_valueSignal: z.string(),
+    q2_icp: z.string(),
     q3_distribution: z.string(),
-    q4_substitute: z.string(),
-    q5_biggestRisk: z.string(),
+    q4_stuck: z.string(),
+    q5_traction: z.string(),
   }),
 });
 

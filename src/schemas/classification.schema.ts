@@ -34,6 +34,18 @@ export const classificationOutputSchema = z.object({
     maturity_stage: z.enum(['idea', 'mvp', 'beta', 'launched', 'scaling']),
   }),
 
+  // Business model classification
+  business_model: z.enum(['b2b_saas', 'marketplace', 'agency', 'consumer', 'hardware', 'other']),
+
+  // Traction metrics parsed from Q5 (all nullable -- only extract if explicitly stated)
+  traction_metrics: z.object({
+    mrr: z.nullable(z.number()),         // Monthly recurring revenue in dollars
+    arr: z.nullable(z.number()),         // Annual recurring revenue in dollars
+    user_count: z.nullable(z.number()),  // Active users/customers/teams
+    growth_rate: z.nullable(z.number()), // Monthly growth percentage
+    months_active: z.nullable(z.number()), // How long the product has been live
+  }),
+
   // Chain-of-thought reasoning (for debugging, not stored in schema)
   reasoning: z.string(),
 });

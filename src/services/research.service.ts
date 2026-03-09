@@ -1,4 +1,5 @@
 import { callOpenAIWebSearch } from './ai.service';
+import { env } from '../config/env';
 import { zodTextFormat } from 'openai/helpers/zod';
 import {
   competitorExtractionSchema,
@@ -7,6 +8,7 @@ import {
   patternExtractionSchema,
   researchOutputSchema,
   type ResearchOutput,
+  type ResearchQuality,
   type Competitor,
   type MarketData,
   type Complaint,
@@ -34,8 +36,19 @@ async function searchCompetitors(
     const result = await callOpenAIWebSearch({
       assessmentId,
       promptName: 'research_competitors',
-      input: `Find the top competitors in the "${category}" / "${subCategory}" market. For each, find: company name, G2 rating (number out of 5), G2 review count, total funding raised, pricing model (freemium/subscription/usage-based/etc), whether they have a free tier (yes/no), and a one-line tagline. Include source URLs. Use null for any field not found. Never invent or estimate data. Return only competitors explicitly mentioned. Base search terms: ${searchQueries.slice(0, 3).join(', ')}`,
-      searchContextSize: 'medium',
+      model: env.OPENAI_RESEARCH_MODEL,
+      input: `Find the top competitors in the "${category}" / "${subCategory}" market. For each competitor, provide:
+- Company name (official name)
+- G2 rating as a decimal number (e.g., 4.5). Return null if not found on G2.
+- G2 review count as an integer. Return null if not found.
+- Total funding raised as a dollar string (e.g., '$50M Series B', '$1.2B'). Return null if not found.
+- Pricing model as specific text (e.g., 'freemium, paid from $29/mo', 'usage-based starting at $0.01/request'). Return null if not found.
+- Whether they have a free tier (true/false). Return null if unclear.
+- A one-line tagline from their website.
+- Source URL where you found the data.
+
+CRITICAL: Only include competitors that actually appear in search results. Never invent companies. Use null for any field where data was not explicitly found. Base search terms: ${searchQueries.slice(0, 3).join(', ')}`,
+      searchContextSize: 'high',
       textFormat: zodTextFormat(competitorExtractionSchema, 'competitor_extraction'),
       temperature: 0.1,
     });
@@ -61,8 +74,15 @@ async function searchMarketData(
     const result = await callOpenAIWebSearch({
       assessmentId,
       promptName: 'research_market',
-      input: `Find market size data for the "${category}" / "${subCategory}" market. Include: Total Addressable Market (TAM), Serviceable Addressable Market (SAM), annual growth rate or CAGR, and major regional market shares/splits. Look for recent market research reports and analyst estimates. Use null for any field not found. Never invent or estimate data. Base search terms: ${searchQueries.slice(0, 3).join(', ')}`,
-      searchContextSize: 'medium',
+      model: env.OPENAI_RESEARCH_MODEL,
+      input: `Find market size data for the "${category}" / "${subCategory}" market. Provide:
+- Total Addressable Market (TAM) as a dollar amount with multiplier (e.g., '$4.2B', '$850M'). Return null if no reliable data.
+- Serviceable Addressable Market (SAM) as a dollar amount with multiplier. Return null if no reliable data.
+- Annual growth rate as 'X.X% CAGR' format (e.g., '12.5% CAGR'). Return null if no reliable data.
+- Major regional market shares/splits.
+
+Look for recent market research reports and analyst estimates (Grand View Research, Mordor Intelligence, Fortune Business Insights, Gartner, etc.). Use null for any field not found. Never invent or estimate data. Base search terms: ${searchQueries.slice(0, 3).join(', ')}`,
+      searchContextSize: 'high',
       textFormat: zodTextFormat(marketExtractionSchema, 'market_extraction'),
       temperature: 0.1,
     });
@@ -87,7 +107,15 @@ async function searchComplaints(
     const result = await callOpenAIWebSearch({
       assessmentId,
       promptName: 'research_complaints',
-      input: `Find the top complaints and pain points in the "${category}" / "${subCategory}" market. Look at G2 reviews, Capterra reviews, Reddit threads, and Trustpilot. Identify 4-6 major complaint themes and estimate what percentage of complaints each theme represents. Use null for any field not found. Never invent or estimate data. Base search terms: ${searchQueries.slice(0, 3).join(', ')}`,
+      model: env.OPENAI_RESEARCH_MODEL,
+      input: `Find the top complaints and pain points in the "${category}" / "${subCategory}" market.
+Source from G2 reviews, Capterra reviews, Reddit threads, and Trustpilot.
+Identify 4-6 major complaint themes. For each theme:
+- Return the theme description
+- Return the source URL where you found this complaint
+- Set percentage to null (do NOT estimate percentages)
+
+CRITICAL: Only report complaints that are explicitly mentioned in search results. Do NOT estimate or fabricate complaint percentages. Set percentage to null for every complaint. Base search terms: ${searchQueries.slice(0, 3).join(', ')}`,
       searchContextSize: 'medium',
       textFormat: zodTextFormat(complaintExtractionSchema, 'complaint_extraction'),
       temperature: 0.1,
@@ -113,7 +141,16 @@ async function searchPatterns(
     const result = await callOpenAIWebSearch({
       assessmentId,
       promptName: 'research_patterns',
-      input: `Analyze the sales and positioning patterns in the "${category}" / "${subCategory}" market. For the top 3 companies, identify: their sales model (self-serve, sales-led, PLG, hybrid), their positioning language/value prop, and identify market gaps or underserved segments. Use null for any field not found. Never invent or estimate data. Base search terms: ${searchQueries.slice(0, 3).join(', ')}`,
+      model: env.OPENAI_RESEARCH_MODEL,
+      input: `Analyze the sales and positioning patterns in the "${category}" / "${subCategory}" market. For the top 3 companies, identify:
+- Company name
+- Sales model (self-serve, sales-led, PLG, hybrid, etc.)
+- Positioning language / value prop
+- Source URL where you found this information
+
+Also identify market gaps or underserved segments.
+
+CRITICAL: Only report companies and patterns from search results. Use null for any field not found. Never invent or estimate data. Base search terms: ${searchQueries.slice(0, 3).join(', ')}`,
       searchContextSize: 'medium',
       textFormat: zodTextFormat(patternExtractionSchema, 'pattern_extraction'),
       temperature: 0.1,
@@ -127,6 +164,33 @@ async function searchPatterns(
 }
 
 // ============================================================================
+// Research quality computation
+// ============================================================================
+
+function computeResearchQuality(
+  competitors: Competitor[],
+  market: MarketData,
+  complaints: Complaint[],
+): ResearchQuality {
+  const competitorCount = competitors.length;
+  const hasMarketData = market.tam !== null;
+  const complaintCount = complaints.length;
+
+  let overall: ResearchQuality['overall'];
+  if (competitorCount === 0 && !hasMarketData) {
+    overall = 'minimal';
+  } else if (competitorCount < 3 || !hasMarketData) {
+    overall = 'thin';
+  } else if (competitorCount >= 5 && hasMarketData && complaintCount >= 3) {
+    overall = 'rich';
+  } else {
+    overall = 'sufficient';
+  }
+
+  return { overall, competitorCount, hasMarketData, complaintCount };
+}
+
+// ============================================================================
 // Main research orchestrator
 // ============================================================================
 
@@ -137,7 +201,8 @@ async function searchPatterns(
  * 2. Checks ResearchCache for cached results (7-day TTL)
  * 3. Runs 4 parallel web search dimensions (competitors, market, complaints, patterns)
  * 4. Validates output with Zod, determines research quality
- * 5. Stores in cache and on assessment.researchData
+ * 5. Single targeted retry when quality is 'minimal' (0 competitors AND no TAM)
+ * 6. Stores in cache and on assessment.researchData
  */
 export async function runResearch(
   assessmentId: string,
@@ -196,19 +261,56 @@ export async function runResearch(
 
   // 6. Run all 4 search dimensions in parallel
   const start = Date.now();
-  const [competitors, market, complaints, patterns] = await Promise.all([
+  let [competitors, market, complaints, patterns] = await Promise.all([
     searchCompetitors(category, subCategory, searchQueries || [], assessmentId),
     searchMarketData(category, subCategory, searchQueries || [], assessmentId),
     searchComplaints(category, subCategory, searchQueries || [], assessmentId),
     searchPatterns(category, subCategory, searchQueries || [], assessmentId),
   ]);
-  const totalDurationMs = Date.now() - start;
 
   // 7. Determine research quality
-  const researchQuality =
-    competitors.length < 3 || !market.tam ? ('limited' as const) : ('sufficient' as const);
+  let researchQuality = computeResearchQuality(competitors, market, complaints);
+  let callCount = 4;
 
-  // 8. Build the output object
+  // 8. Targeted retry when quality is 'minimal' (0 competitors AND no TAM)
+  if (researchQuality.overall === 'minimal') {
+    // Retry both weakest dimensions with reformulated queries
+    if (competitors.length === 0) {
+      const retried = await searchCompetitors(
+        category, subCategory,
+        [`top ${subCategory} software companies`, `${category} ${subCategory} alternatives`, `best ${subCategory} tools`],
+        assessmentId,
+      );
+      if (retried.length > 0) competitors = retried;
+      callCount++;
+    }
+    if (!market.tam) {
+      const retried = await searchMarketData(
+        category, subCategory,
+        [`${subCategory} market size 2024 2025`, `${category} TAM report`, `${subCategory} industry revenue`],
+        assessmentId,
+      );
+      if (retried.tam) market = retried;
+      callCount++;
+    }
+    researchQuality = computeResearchQuality(competitors, market, complaints);
+  } else if (researchQuality.overall === 'thin') {
+    // Thin: try to fill the weakest gap
+    if (competitors.length < 3) {
+      const retried = await searchCompetitors(
+        category, subCategory,
+        [`${subCategory} alternatives comparison`, `top ${category} companies list`],
+        assessmentId,
+      );
+      if (retried.length > competitors.length) competitors = retried;
+      callCount++;
+    }
+    researchQuality = computeResearchQuality(competitors, market, complaints);
+  }
+
+  const totalDurationMs = Date.now() - start;
+
+  // 9. Build the output object
   const researchOutput: ResearchOutput = {
     competitors,
     market,
@@ -217,19 +319,19 @@ export async function runResearch(
     researchQuality,
     metadata: {
       totalDurationMs,
-      callCount: 4, // 4 dimensions x 1 call each (search + parse combined)
+      callCount,
       cachedHit: false,
       researchedAt: new Date().toISOString(),
     },
   };
 
-  // 9. Validate with Zod
+  // 10. Validate with Zod
   const validated = researchOutputSchema.safeParse(researchOutput);
   if (!validated.success) {
     throw new AIError(`Research output failed validation: ${validated.error.message}`);
   }
 
-  // 10. Store in cache with 7-day TTL
+  // 11. Store in cache with 7-day TTL
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   await prisma.researchCache.upsert({
     where: { category_subCategory: cacheKey },
@@ -237,12 +339,12 @@ export async function runResearch(
     create: { ...cacheKey, data: validated.data as any, expiresAt },
   });
 
-  // 11. Store snapshot on assessment
+  // 12. Store snapshot on assessment
   await prisma.assessment.update({
     where: { id: assessmentId },
     data: { researchData: validated.data as any },
   });
 
-  // 12. Return validated data
+  // 13. Return validated data
   return validated.data;
 }

@@ -32,6 +32,7 @@ export const marketDataSchema = z.object({
 export const complaintSchema = z.object({
   theme: z.string(),
   percentage: z.nullable(z.number()),
+  sourceUrl: z.nullable(z.string()),
 });
 
 export const patternSchema = z.object({
@@ -41,6 +42,7 @@ export const patternSchema = z.object({
         name: z.string(),
         salesModel: z.nullable(z.string()),
         positioning: z.nullable(z.string()),
+        sourceUrl: z.nullable(z.string()),
       }),
     ),
   ),
@@ -51,12 +53,21 @@ export const patternSchema = z.object({
 // Full research output schema
 // ============================================================================
 
+export const researchQualitySchema = z.object({
+  overall: z.enum(['rich', 'sufficient', 'thin', 'minimal']),
+  competitorCount: z.number().int(),
+  hasMarketData: z.boolean(),
+  complaintCount: z.number().int(),
+});
+
+export type ResearchQuality = z.infer<typeof researchQualitySchema>;
+
 export const researchOutputSchema = z.object({
   competitors: z.array(competitorSchema),
   market: marketDataSchema,
   complaints: z.array(complaintSchema),
   patterns: patternSchema,
-  researchQuality: z.enum(['sufficient', 'limited']),
+  researchQuality: researchQualitySchema,
   metadata: z.object({
     totalDurationMs: z.number(),
     callCount: z.number().int(),

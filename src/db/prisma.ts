@@ -11,13 +11,16 @@ type PrismaInstance = InstanceType<typeof PrismaClient>;
 const globalForPrisma = globalThis as unknown as { prisma: PrismaInstance | undefined };
 
 function createClient(): PrismaInstance {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
     max: 3,
     min: 0,
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: isProduction ? 30000 : 10000,
     allowExitOnIdle: true,
+    ...(isProduction && { ssl: { rejectUnauthorized: false } }),
   });
 
   // Evict dead connections so they don't poison the pool after hibernation

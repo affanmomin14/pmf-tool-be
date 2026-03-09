@@ -8,30 +8,52 @@ import { NotFoundError, ValidationError } from '../errors';
 // ============================================================================
 
 /**
- * Parse market size strings like "$2.5B", "$500M", "$50K" into numeric values.
+ * Parse market size strings like "$2.5B", "$500M", "$50K", "~$2.5 billion",
+ * "approximately $500M", "$2.5-3.0B" (takes first number) into numeric values.
  * Returns null for unparseable strings.
  */
 export function parseMarketSize(value: string | null): number | null {
   if (!value) return null;
-  const match = value.match(/\$?([\d.]+)\s*(B|billion|M|million|K|thousand)?/i);
+  // Strip prefixes: ~, approximately, about, around, over, nearly
+  const cleaned = value.replace(/^[~≈]|approximately|about|around|over|nearly/gi, '').trim();
+  // Match dollar amount with optional multiplier (supports bn, trillion, T)
+  const match = cleaned.match(/\$?\s*([\d,.]+)\s*[-–]?\s*(?:[\d,.]+\s*)?(?:\s*(B|bn|billion|T|trillion|M|million|K|thousand))?/i);
   if (!match) return null;
-  const num = parseFloat(match[1]);
+  const num = parseFloat(match[1].replace(/,/g, ''));
   if (isNaN(num)) return null;
   const multiplier = match[2]?.toUpperCase();
-  if (multiplier === 'B' || multiplier === 'BILLION') return num * 1_000_000_000;
+  if (multiplier === 'B' || multiplier === 'BN' || multiplier === 'BILLION') return num * 1_000_000_000;
+  if (multiplier === 'T' || multiplier === 'TRILLION') return num * 1_000_000_000_000;
   if (multiplier === 'M' || multiplier === 'MILLION') return num * 1_000_000;
   if (multiplier === 'K' || multiplier === 'THOUSAND') return num * 1_000;
   return num;
 }
 
 /**
- * Parse percentage strings like "15% CAGR", "~20%", "8.5%" into numeric values.
+ * Parse percentage strings like "15% CAGR", "~20%", "8.5%", "approximately 12%",
+ * "10-15% CAGR" (takes midpoint for ranges) into numeric values.
  * Returns null for unparseable strings.
  */
 export function parsePercentage(value: string | null): number | null {
   if (!value) return null;
-  const match = value.match(/~?([\d.]+)\s*%/);
-  if (!match) return null;
+  // Strip prefixes: ~, approximately, about, around
+  const cleaned = value.replace(/^[~≈]|approximately|about|around/gi, '').trim();
+  // Try range first: "10-15%" or "10% - 15%"
+  const rangeMatch = cleaned.match(/([\d.]+)\s*%?\s*[-–to]+\s*([\d.]+)\s*%/);
+  if (rangeMatch) {
+    const low = parseFloat(rangeMatch[1]);
+    const high = parseFloat(rangeMatch[2]);
+    if (!isNaN(low) && !isNaN(high)) return (low + high) / 2;
+  }
+  // Single value: "15% CAGR", "8.5 percent", etc.
+  const match = cleaned.match(/([\d.]+)\s*(?:%|percent|CAGR|growth|annually)/i);
+  if (!match) {
+    // Fallback: any number followed by %
+    const fallback = cleaned.match(/([\d.]+)\s*%/);
+    if (!fallback) return null;
+    const num = parseFloat(fallback[1]);
+    return isNaN(num) ? null : num;
+  }
   const num = parseFloat(match[1]);
   return isNaN(num) ? null : num;
 }
@@ -42,6 +64,15 @@ export function parsePercentage(value: string | null): number | null {
  */
 function parseFunding(value: string | null): number | null {
   return parseMarketSize(value); // Same format: "$XM", "$XB"
+}
+
+/**
+ * Check if research quality indicates limited/thin/minimal data.
+ * Handles both old string format ('limited') and new object format.
+ */
+function isResearchLimited(quality: ScoringInput['research']['researchQuality']): boolean {
+  if (typeof quality === 'string') return quality === 'limited';
+  return quality.overall === 'thin' || quality.overall === 'minimal';
 }
 
 // ============================================================================
@@ -84,7 +115,7 @@ export function scoreDemand(input: ScoringInput): DimensionResult {
   const tamValue = parseMarketSize(input.research.market.tam);
   let marketSizeScore: number;
   if (tamValue === null) {
-    marketSizeScore = 5;
+    marketSizeScore = 4;
   } else if (tamValue >= 10_000_000_000) {
     marketSizeScore = 9;
   } else if (tamValue >= 1_000_000_000) {
@@ -94,13 +125,13 @@ export function scoreDemand(input: ScoringInput): DimensionResult {
   } else {
     marketSizeScore = 3;
   }
-  subScores.push({ name: 'marketSize', value: marketSizeScore, signal: input.research.market.tam || 'unknown' });
+  subScores.push({ name: 'marketSize', value: marketSizeScore, signal: tamValue === null ? 'Market data unparseable — score reflects uncertainty' : (input.research.market.tam || 'unknown') });
 
   // Sub-score 2: Growth rate
   const growthPct = parsePercentage(input.research.market.growthRate);
   let growthScore: number;
   if (growthPct === null) {
-    growthScore = 5;
+    growthScore = 4;
   } else if (growthPct >= 25) {
     growthScore = 9;
   } else if (growthPct >= 15) {
@@ -110,7 +141,7 @@ export function scoreDemand(input: ScoringInput): DimensionResult {
   } else {
     growthScore = 3;
   }
-  subScores.push({ name: 'growthRate', value: growthScore, signal: input.research.market.growthRate || 'unknown' });
+  subScores.push({ name: 'growthRate', value: growthScore, signal: growthPct === null ? 'Growth data unparseable — score reflects uncertainty' : (input.research.market.growthRate || 'unknown') });
 
   // Sub-score 3: Competitor density (more = validated market)
   const competitorCount = input.research.competitors.length;
@@ -127,8 +158,25 @@ export function scoreDemand(input: ScoringInput): DimensionResult {
   subScores.push({ name: 'competitorDensity', value: densityScore, signal: `${competitorCount} competitors found` });
 
   const avg = subScores.reduce((sum, s) => sum + s.value, 0) / subScores.length;
-  const confidence = input.research.researchQuality === 'limited' ? 'low' as const : 'high' as const;
-  return { score: clampScore(avg), subScores, confidence };
+  const confidence = isResearchLimited(input.research.researchQuality) ? 'low' as const : 'high' as const;
+
+  // Apply confidence penalty if research is limited
+  let finalScore = clampScore(avg);
+  if (confidence === 'low') {
+    finalScore = clampScore(finalScore - 1);
+  }
+
+  // Apply traction boost (hard traction trumps missing market data)
+  const tm = input.classification.traction_metrics;
+  if (tm.mrr && tm.mrr >= 10000) {
+    finalScore = clampScore(finalScore + 1);
+    subScores.push({ name: 'tractionValidation', value: 8, signal: `Strong demand validated by $${(tm.mrr / 1000).toFixed(1)}k MRR` });
+  } else if (tm.user_count && tm.user_count >= 1000) {
+    finalScore = clampScore(finalScore + 1);
+    subScores.push({ name: 'tractionValidation', value: 7, signal: `Demand validated by ${tm.user_count} users` });
+  }
+
+  return { score: finalScore, subScores, confidence };
 }
 
 // 4b: scoreIcpFocus -- ICP specificity and targeting (weight: 0.15)
@@ -136,8 +184,16 @@ export function scoreIcpFocus(input: ScoringInput): DimensionResult {
   const subScores: SubScore[] = [];
 
   // Sub-score 1: ICP specificity (1-5 scale mapped to 1-10)
-  const specScore = input.classification.icp_specificity * 2;
-  subScores.push({ name: 'icpSpecificity', value: clampScore(specScore), signal: `ICP specificity: ${input.classification.icp_specificity}/5` });
+  let specScore = input.classification.icp_specificity * 2;
+
+  // Penalize generic "laundry list" ICPs that the LLM might have missed
+  const q2Segments = input.founderAnswers.q2_icp.split(',').length;
+  const hasQualifiers = /employees|mrr|arr|revenue|funding|series|scale|size/i.test(input.founderAnswers.q2_icp);
+  if (q2Segments >= 3 && !hasQualifiers) {
+    specScore = Math.min(specScore, 4); // Cap at 4/10 if it's just a comma-separated list of broad personas
+  }
+
+  subScores.push({ name: 'icpSpecificity', value: clampScore(specScore), signal: `ICP specificity: ${specScore / 2}/5` });
 
   // Sub-score 2: ICP completeness (count of non-null extracted fields)
   const icp = input.classification.icp_extracted;
@@ -187,8 +243,14 @@ export function scoreDifferentiation(input: ScoringInput): DimensionResult {
   subScores.push({ name: 'tractionSignal', value: tractionScore, signal: `Traction: ${input.classification.product_signals.traction_level}` });
 
   const avg = subScores.reduce((sum, s) => sum + s.value, 0) / subScores.length;
-  const confidence = input.research.researchQuality === 'limited' ? 'low' as const : 'medium' as const;
-  return { score: clampScore(avg), subScores, confidence };
+  const confidence = isResearchLimited(input.research.researchQuality) ? 'low' as const : 'medium' as const;
+
+  let finalScore = clampScore(avg);
+  if (confidence === 'low') {
+    finalScore = clampScore(finalScore - 1);
+  }
+
+  return { score: finalScore, subScores, confidence };
 }
 
 // 4d: scoreDistributionFit -- Scalable channel alignment (weight: 0.16)
@@ -201,18 +263,29 @@ export function scoreDistributionFit(input: ScoringInput): DimensionResult {
   subScores.push({ name: 'maturityStage', value: maturityScore, signal: `Maturity: ${input.classification.product_signals.maturity_stage}` });
 
   // Sub-score 2: Sales model alignment
+  // Q3 values from PRD: self_serve, sales_assisted, founder_led, partner_channel, undefined
   const q3Lower = input.founderAnswers.q3_distribution.toLowerCase();
-  const distributionKeywords = ['self-serve', 'self serve', 'plg', 'product-led', 'product led', 'freemium', 'free trial', 'sales-led', 'sales led', 'outbound', 'inbound', 'content', 'seo', 'social', 'partnership', 'referral'];
-  const founderChannels = distributionKeywords.filter(kw => q3Lower.includes(kw));
+  // Map PRD Q3 values to model keywords for matching against research
+  const MODEL_KEYWORDS: Record<string, string[]> = {
+    self_serve: ['self-serve', 'self serve', 'plg', 'product-led', 'product led', 'freemium', 'free trial'],
+    sales_assisted: ['sales-led', 'sales led', 'demo', 'enterprise', 'sales-assisted'],
+    founder_led: ['founder-led', 'founder led', 'outbound', 'direct sales'],
+    partner_channel: ['partnership', 'partner', 'marketplace', 'integration', 'channel'],
+    undefined: [],
+  };
+  const founderKeywords = MODEL_KEYWORDS[q3Lower] || [];
   const topCompanySalesModels = (input.research.patterns.topCompanies || [])
     .map(c => c.salesModel?.toLowerCase() || '')
     .filter(s => s.length > 0);
-  // Simple match: do any founder keywords appear in any top company sales model?
-  const hasModelMatch = founderChannels.length > 0 && topCompanySalesModels.some(sm =>
-    founderChannels.some(fc => sm.includes(fc) || fc.includes(sm.split(/\s+/)[0]))
+  const hasModelMatch = founderKeywords.length > 0 && topCompanySalesModels.some(sm =>
+    founderKeywords.some(kw => sm.includes(kw))
   );
-  const modelScore = (founderChannels.length === 0 && topCompanySalesModels.length === 0) ? 5 : hasModelMatch ? 7 : 4;
-  subScores.push({ name: 'salesModelMatch', value: modelScore, signal: hasModelMatch ? 'Distribution aligns with market leaders' : 'Distribution model differs from market leaders or insufficient data' });
+  // Relax exact matching constraint for partner channel
+  const hasPartnerMatch = q3Lower === 'partner_channel' && topCompanySalesModels.some(sm => /partner|integration|marketplace|channel/i.test(sm));
+  const isMatch = hasModelMatch || hasPartnerMatch;
+
+  const modelScore = q3Lower === 'undefined' ? 2 : (founderKeywords.length === 0 && topCompanySalesModels.length === 0) ? 5 : isMatch ? 7 : 4;
+  subScores.push({ name: 'salesModelMatch', value: modelScore, signal: isMatch ? 'Distribution aligns with market leaders' : q3Lower === 'undefined' ? 'No distribution model defined' : 'Distribution model differs from market leaders or insufficient data' });
 
   // Sub-score 3: Free tier prevalence (PLG-friendly market signal)
   const competitorsWithFreeTierData = input.research.competitors.filter(c => c.freeTier !== null);
@@ -228,7 +301,7 @@ export function scoreDistributionFit(input: ScoringInput): DimensionResult {
   subScores.push({ name: 'freeTierPrevalence', value: freeTierScore, signal: `${competitorsWithFreeTierData.filter(c => c.freeTier).length}/${competitorsWithFreeTierData.length} competitors offer free tier` });
 
   const avg = subScores.reduce((sum, s) => sum + s.value, 0) / subScores.length;
-  const confidence = input.research.researchQuality === 'limited' ? 'low' as const : 'medium' as const;
+  const confidence = isResearchLimited(input.research.researchQuality) ? 'low' as const : 'medium' as const;
   return { score: clampScore(avg), subScores, confidence };
 }
 
@@ -270,8 +343,14 @@ export function scoreProblemSeverity(input: ScoringInput): DimensionResult {
   subScores.push({ name: 'tractionAsProxy', value: tractionScore, signal: `Traction: ${input.classification.product_signals.traction_level}` });
 
   const avg = subScores.reduce((sum, s) => sum + s.value, 0) / subScores.length;
-  const confidence = (input.research.researchQuality === 'limited' || input.research.complaints.length < 2) ? 'low' as const : 'medium' as const;
-  return { score: clampScore(avg), subScores, confidence };
+  const confidence = (isResearchLimited(input.research.researchQuality) || input.research.complaints.length < 2) ? 'low' as const : 'medium' as const;
+
+  let finalScore = clampScore(avg);
+  if (confidence === 'low') {
+    finalScore = clampScore(finalScore - 1);
+  }
+
+  return { score: finalScore, subScores, confidence };
 }
 
 // 4f: scoreCompetitivePosition -- Market dynamics and moat strength (weight: 0.14)
@@ -323,8 +402,14 @@ export function scoreCompetitivePosition(input: ScoringInput): DimensionResult {
   subScores.push({ name: 'positioningClarity', value: hasPositioningData ? 6 : 4, signal: hasPositioningData ? 'Market has clear positioning patterns' : 'No positioning data available' });
 
   const avg = subScores.reduce((sum, s) => sum + s.value, 0) / subScores.length;
-  const confidence = input.research.researchQuality === 'limited' ? 'low' as const : 'medium' as const;
-  return { score: clampScore(avg), subScores, confidence };
+  const confidence = isResearchLimited(input.research.researchQuality) ? 'low' as const : 'medium' as const;
+
+  let finalScore = clampScore(avg);
+  if (confidence === 'low') {
+    finalScore = clampScore(finalScore - 1);
+  }
+
+  return { score: finalScore, subScores, confidence };
 }
 
 // 4g: scoreTrustAndProof -- Social proof, reviews, and market validation (weight: 0.08)
@@ -354,7 +439,20 @@ export function scoreTrustAndProof(input: ScoringInput): DimensionResult {
   subScores.push({ name: 'tractionProof', value: tractionScore, signal: `Traction: ${input.classification.product_signals.traction_level}` });
 
   const avg = subScores.reduce((sum, s) => sum + s.value, 0) / subScores.length;
-  return { score: clampScore(avg), subScores, confidence: 'medium' };
+
+  let finalScore = clampScore(avg);
+
+  // Real traction is the ultimate proof of trust
+  const tm = input.classification.traction_metrics;
+  if (tm.arr && tm.arr >= 1000000) {
+    finalScore = 10; // $1M ARR = instant 10/10 trust
+    subScores.push({ name: 'hardTraction', value: 10, signal: `Proven by $ ${(tm.arr / 1000000).toFixed(1)}M ARR` });
+  } else if (tm.mrr && tm.mrr >= 10000) {
+    finalScore = clampScore(finalScore + 2);
+    subScores.push({ name: 'hardTraction', value: 9, signal: `Proven by $${(tm.mrr / 1000).toFixed(1)}k MRR` });
+  }
+
+  return { score: finalScore, subScores, confidence: 'medium' };
 }
 
 // ============================================================================
@@ -462,6 +560,10 @@ function assembleScoringInput(assessment: any): ScoringInput {
       product_signals: classification.product_signals || {
         pricing_model: null, traction_level: 'none', maturity_stage: 'idea',
       },
+      business_model: classification.business_model || 'other',
+      traction_metrics: classification.traction_metrics || {
+        mrr: null, arr: null, user_count: null, growth_rate: null, months_active: null,
+      },
       likely_competitors: classification.likely_competitors || [],
     },
     research: {
@@ -487,14 +589,14 @@ function assembleScoringInput(assessment: any): ScoringInput {
         topCompanies: research.patterns?.topCompanies ?? null,
         gaps: research.patterns?.gaps ?? null,
       },
-      researchQuality: research.researchQuality || 'limited',
+      researchQuality: research.researchQuality || { overall: 'minimal', competitorCount: 0, hasMarketData: false, complaintCount: 0 },
     },
     founderAnswers: {
       q1_product: getAnswer(1),
-      q2_valueSignal: getAnswer(2),
+      q2_icp: getAnswer(2),
       q3_distribution: q3Answer,
-      q4_substitute: getAnswer(4),
-      q5_biggestRisk: getAnswer(5),
+      q4_stuck: getAnswer(4),
+      q5_traction: getAnswer(5),
     },
   };
 }

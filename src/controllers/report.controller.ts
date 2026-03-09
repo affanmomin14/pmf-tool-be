@@ -45,18 +45,6 @@ export const emailReport = async (req: Request, res: Response) => {
     pmfStage: report.pmfStage,
     verdict,
     reportToken: token,
-    reportData: {
-      pmfScore: report.pmfScore,
-      pmfStage: report.pmfStage,
-      primaryBreak: report.primaryBreak,
-      content: report.content as Record<string, any>,
-      scores: (content.scorecard || []).map((s: any) => ({
-        name: s.dimension,
-        score: s.score,
-        weight: 0,
-        verdict: s.label || s.insight || '',
-      })),
-    },
   });
 
   res.json({ success: true, data: { sent: true } });

@@ -18,6 +18,8 @@ Analyze the founder's responses and extract:
 5. Problem type: what core challenge does the founder face? (acquisition/retention/activation/monetization/positioning/unclear)
 6. ICP (Ideal Customer Profile) specificity score (1-5) and extracted details
 7. Product signals: pricing model hints, traction level, maturity stage
+8. Business model: classify as b2b_saas, marketplace, agency, consumer, hardware, or other
+9. Traction metrics: extract specific numbers from Q5 (Current Traction). ONLY extract numbers the founder explicitly states. Set all fields to null if not mentioned.
 
 ## Chain-of-Thought Reasoning
 IMPORTANT: Before producing your classification, write your reasoning in the "reasoning" field. Think through:
@@ -43,6 +45,14 @@ IMPORTANT: Before producing your classification, write your reasoning in the "re
 4 = Specific segment (e.g., "B2B SaaS companies with 50-200 employees")
 5 = Laser-focused (e.g., "Series A fintech startups in Southeast Asia doing cross-border payments")
 
+## Traction Metrics Extraction Rules
+- mrr: Monthly recurring revenue in dollars. Extract from patterns like "$28K MRR", "$5,000/mo revenue". Convert to raw number (28000, 5000). null if not mentioned.
+- arr: Annual recurring revenue in dollars. Extract from patterns like "$500K ARR", "~$1M annual revenue". null if not mentioned.
+- user_count: Active users, customers, or teams. Extract from patterns like "340 teams", "2000 users", "50 paying customers". Use the most relevant number. null if not mentioned.
+- growth_rate: Monthly growth as a percentage number. Extract from "15% MoM", "growing 10% monthly". null if not mentioned.
+- months_active: How long the product has been live. Extract from "launched 6 months ago", "14 months in", "started in January 2024". null if not mentioned.
+CRITICAL: Never estimate or infer. Only extract numbers the founder explicitly provides.
+
 ## Output Format
 Respond with a JSON object matching the exact schema provided. All fields are required.`;
 
@@ -51,9 +61,9 @@ const EXAMPLE_1_INPUT = `Q1 (Product): We built a project management tool specif
 
 Q2 (Target Customer): Engineering managers and CTOs at mid-size SaaS companies (50-300 employees) who are frustrated with juggling multiple tools for sprint planning and code tracking.
 
-Q3 (Distribution): We're doing direct outreach to engineering leaders on LinkedIn, sponsoring dev podcasts, and have a free tier that lets teams of up to 5 try it. About 40% of paid conversions come from the free tier.
+Q3 (Distribution): They sign up and use it themselves
 
-Q4 (Biggest Challenge): Our biggest challenge is retention after the first 30 days. Teams sign up excited but often revert to their existing Jira workflow because migration is painful.
+Q4 (Biggest Challenge): Teams sign up excited but often revert to their existing Jira workflow after 30 days because migration is painful.
 
 Q5 (Current Traction): 340 teams on the free tier, 52 paying ($49/seat/month), $28K MRR, growing about 15% month-over-month. We raised a $2M seed round 4 months ago.`;
 
@@ -85,6 +95,14 @@ const EXAMPLE_1_OUTPUT = JSON.stringify({
     traction_level: 'growing',
     maturity_stage: 'launched',
   },
+  business_model: 'b2b_saas',
+  traction_metrics: {
+    mrr: 28000,
+    arr: null,
+    user_count: 340,
+    growth_rate: 15,
+    months_active: 4,
+  },
 });
 
 // Few-shot example 2: Early-stage/vague (medium confidence)
@@ -92,11 +110,11 @@ const EXAMPLE_2_INPUT = `Q1 (Product): We're building an app that helps people e
 
 Q2 (Target Customer): Health-conscious people who want to eat better but don't have time to plan meals.
 
-Q3 (Distribution): Mostly Instagram and TikTok. We post recipe videos and tips.
+Q3 (Distribution): They sign up and use it themselves
 
-Q4 (Biggest Challenge): Getting people to actually download the app and use it regularly.
+Q4 (Biggest Challenge): Getting people to actually download the app and use it regularly. Nobody knows we exist.
 
-Q5 (Current Traction): We have about 200 downloads and maybe 30 people use it weekly. No revenue yet. We're bootstrapped.`;
+Q5 (Current Traction): We have about 200 downloads and maybe 30 people use it weekly. No revenue yet. We're bootstrapped, 4 months in.`;
 
 const EXAMPLE_2_OUTPUT = JSON.stringify({
   reasoning:
@@ -125,6 +143,14 @@ const EXAMPLE_2_OUTPUT = JSON.stringify({
     traction_level: 'early',
     maturity_stage: 'mvp',
   },
+  business_model: 'consumer',
+  traction_metrics: {
+    mrr: null,
+    arr: null,
+    user_count: 30,
+    growth_rate: null,
+    months_active: 4,
+  },
 });
 
 // Few-shot example 3: Niche/unusual (high confidence)
@@ -132,11 +158,11 @@ const EXAMPLE_3_INPUT = `Q1 (Product): We provide drone-based thermal imaging in
 
 Q2 (Target Customer): Solar farm operators and O&M (operations & maintenance) companies managing utility-scale installations above 5MW in the US Southwest.
 
-Q3 (Distribution): Direct sales through industry conferences (Solar Power International, RE+), partnerships with two O&M firms who white-label our reports, and referrals from existing clients.
+Q3 (Distribution): I personally sell it — DMs, calls, network
 
-Q4 (Biggest Challenge): Convincing prospects that our automated analysis is more accurate than manual thermographer inspections. The industry is conservative and trusts human inspectors.
+Q4 (Biggest Challenge): Convincing prospects that our automated analysis is more accurate than manual thermographer inspections. The industry is conservative and trusts human inspectors. We look like everyone else in the space.
 
-Q5 (Current Traction): 12 active contracts, $18K MRR, 100% retention over 14 months. Pipeline of $45K in proposals. Self-funded, profitable.`;
+Q5 (Current Traction): 12 active contracts, $18K MRR, 100% retention over 14 months. Pipeline of $45K in proposals. Self-funded, profitable, 14 months in.`;
 
 const EXAMPLE_3_OUTPUT = JSON.stringify({
   reasoning:
@@ -170,6 +196,14 @@ const EXAMPLE_3_OUTPUT = JSON.stringify({
     pricing_model: 'contract-based (recurring)',
     traction_level: 'growing',
     maturity_stage: 'launched',
+  },
+  business_model: 'b2b_saas',
+  traction_metrics: {
+    mrr: 18000,
+    arr: null,
+    user_count: 12,
+    growth_rate: null,
+    months_active: 14,
   },
 });
 

@@ -7,8 +7,8 @@ import { generateReportWithCorrections } from './report.service';
 // ============================================================================
 
 export interface HallucinationFlag {
-  check: string; // 'number_verification' | 'company_names' | 'score_text_consistency' | 'verdict_length' | 'banned_words'
-  field: string; // dotpath or 'report_text' for broad matches
+  check: string;
+  field: string;
   expected: string;
   found: string;
   severity: 'error' | 'warning';
@@ -44,8 +44,8 @@ function buildNumberAllowlist(
     allowlist.add(n);
   }
 
-  // Add all integers 0-100 (covers dimension scores 1-10 and PMF score 0-100)
-  for (let i = 0; i <= 100; i++) {
+  // Add scores 1-10 (for ratings and dimension scores)
+  for (let i = 1; i <= 10; i++) {
     allowlist.add(String(i));
   }
 
@@ -98,7 +98,10 @@ const COMMON_SKIP_TERMS = new Set([
   'product market fit', 'pmf', 'tam', 'sam', 'saas', 'b2b', 'b2c', 'ai',
   'series a', 'series b', 'series c', 'mrr', 'arr', 'api', 'roi', 'kpi',
   'cac', 'ltv', 'nps', 'seo', 'crm', 'erp', 'mvp', 'ux', 'ui',
-  'data not available', 'not available',
+  'data not available', 'not available', 'sprint',
+  'the', 'this', 'we', 'they', 'our', 'their', 'it', 'he', 'she',
+  'however', 'therefore', 'first', 'second', 'next', 'finally', 'yes', 'no',
+  'for', 'in', 'on', 'at', 'to', 'with', 'from', 'by', 'as', 'an', 'a',
 ]);
 
 export function checkCompanyNames(
@@ -113,7 +116,7 @@ export function checkCompanyNames(
     knownCompanies.add(c.name.toLowerCase());
   }
   // Add the founder's company name from report header
-  knownCompanies.add(report.header.companyName.toLowerCase());
+  knownCompanies.add(report.header.product_name.toLowerCase());
 
   // Extract capitalized multi-word phrases from report text
   const reportStr = JSON.stringify(report);
@@ -130,8 +133,8 @@ export function checkCompanyNames(
     const lower = name.toLowerCase();
     if (knownCompanies.has(lower)) continue;
     if (COMMON_SKIP_TERMS.has(lower)) continue;
-    // Skip single common English words
-    if (name.split(/\s+/).length === 1) continue;
+    // Skip single-letter capitalizations
+    if (name.length === 1) continue;
 
     flags.push({
       check: 'company_names',
@@ -166,14 +169,14 @@ export function checkScoreTextConsistency(
 ): HallucinationFlag[] {
   const flags: HallucinationFlag[] = [];
 
-  // Check each scorecard item
-  for (const item of report.scorecard) {
+  // Check each scorecard dimension
+  for (const item of report.scorecard.dimensions) {
     if (item.score <= 3) {
-      const found = textContainsWord(item.insight, POSITIVE_WORDS);
+      const found = textContainsWord(item.evidence, POSITIVE_WORDS);
       if (found) {
         flags.push({
           check: 'score_text_consistency',
-          field: `scorecard.${item.dimension}.insight`,
+          field: `scorecard.${item.name}.evidence`,
           expected: `Negative/neutral tone for score ${item.score}`,
           found: `Positive word "${found}" with score ${item.score}`,
           severity: 'error',
@@ -181,11 +184,11 @@ export function checkScoreTextConsistency(
       }
     }
     if (item.score >= 8) {
-      const found = textContainsWord(item.insight, NEGATIVE_WORDS);
+      const found = textContainsWord(item.evidence, NEGATIVE_WORDS);
       if (found) {
         flags.push({
           check: 'score_text_consistency',
-          field: `scorecard.${item.dimension}.insight`,
+          field: `scorecard.${item.name}.evidence`,
           expected: `Positive/neutral tone for score ${item.score}`,
           found: `Negative word "${found}" with score ${item.score}`,
           severity: 'error',
@@ -196,8 +199,8 @@ export function checkScoreTextConsistency(
 
   // Check overall PMF score consistency
   const overallTexts = [
-    { text: report.bottom_line.summary, field: 'bottom_line.summary' },
-    { text: report.reality_check.summary, field: 'reality_check.summary' },
+    { text: report.bottom_line.verdict, field: 'bottom_line.verdict' },
+    { text: report.bottom_line.verdict_detail, field: 'bottom_line.verdict_detail' },
   ];
 
   for (const { text, field } of overallTexts) {
@@ -227,6 +230,25 @@ export function checkScoreTextConsistency(
     }
   }
 
+  // Check specific semantic contradictions for key dimensions
+  const demandScore = scores.dimensions.find(d => d.dimension.toLowerCase() === 'demand')?.score;
+  if (demandScore && demandScore >= 8) {
+    const demandTexts = [report.header.verdict, report.bottom_line.verdict].join(' ');
+    const found = textContainsWord(demandTexts, ['no demand', 'low demand', 'no validated demand', 'lack of demand']);
+    if (found) {
+      flags.push({ check: 'semantic_consistency', field: 'verdict', expected: 'Acknowledges strong demand (score >= 8)', found: `Contradictory phrase "${found}"`, severity: 'error' });
+    }
+  }
+
+  const diffScore = scores.dimensions.find(d => d.dimension.toLowerCase() === 'differentiation')?.score;
+  if (diffScore && diffScore >= 8) {
+    const diffTexts = [report.header.verdict, report.bottom_line.verdict].join(' ');
+    const found = textContainsWord(diffTexts, ['no differentiation', 'undifferentiated', 'commodity', 'looks like everyone else']);
+    if (found) {
+      flags.push({ check: 'semantic_consistency', field: 'verdict', expected: 'Acknowledges strong differentiation (score >= 8)', found: `Contradictory phrase "${found}"`, severity: 'error' });
+    }
+  }
+
   return flags;
 }
 
@@ -236,36 +258,36 @@ export function checkScoreTextConsistency(
 
 export function checkVerdictLength(report: ReportOutput): HallucinationFlag[] {
   const flags: HallucinationFlag[] = [];
-  const verdict = report.header.verdict;
 
-  // Split on sentence boundaries (with trailing space to avoid splitting decimals)
-  const sentences = verdict.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
-
-  if (sentences.length > 1) {
-    flags.push({
-      check: 'verdict_length',
-      field: 'header.verdict',
-      expected: 'Single sentence verdict',
-      found: `${sentences.length} sentences: "${verdict}"`,
-      severity: 'warning',
-    });
+  for (const [field, text] of [
+    ['header.verdict', report.header.verdict],
+    ['bottom_line.verdict', report.bottom_line.verdict],
+  ] as const) {
+    const sentences = text.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
+    if (sentences.length > 1) {
+      flags.push({
+        check: 'verdict_length',
+        field,
+        expected: 'Single sentence verdict',
+        found: `${sentences.length} sentences: "${text}"`,
+        severity: 'warning',
+      });
+    }
   }
 
   return flags;
 }
 
-export function truncateVerdict(report: ReportOutput): ReportOutput {
-  const verdict = report.header.verdict;
-  const sentences = verdict.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
-
-  if (sentences.length <= 1) return report;
+export function truncateVerdicts(report: ReportOutput): ReportOutput {
+  const truncate = (text: string) => {
+    const sentences = text.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0);
+    return sentences.length <= 1 ? text : sentences[0];
+  };
 
   return {
     ...report,
-    header: {
-      ...report.header,
-      verdict: sentences[0],
-    },
+    header: { ...report.header, verdict: truncate(report.header.verdict) },
+    bottom_line: { ...report.bottom_line, verdict: truncate(report.bottom_line.verdict) },
   };
 }
 
@@ -278,7 +300,7 @@ const BANNED_WORD_MAP: Record<string, string> = {
   'game-changing': 'significant',
   'game-changer': 'significant development',
   'synergy': 'alignment',
-  'disruptive': 'innovative',
+  'disruptive': 'differentiated',
   'paradigm shift': 'major change',
   'best-in-class': 'strong',
   'cutting-edge': 'modern',
@@ -286,6 +308,15 @@ const BANNED_WORD_MAP: Record<string, string> = {
   'groundbreaking': 'notable',
   'unprecedented': 'unusual',
   'leverage': 'use',
+  'holistic': 'comprehensive',
+  'ecosystem': 'market',
+  'streamline': 'simplify',
+  'navigate': 'address',
+  'landscape': 'competitive set',
+  'empower': 'enable',
+  'robust': 'strong',
+  'scalable': 'growth-ready',
+  'innovative': 'differentiated',
 };
 
 export function checkAndReplaceBannedWords(
@@ -327,7 +358,6 @@ function runAllChecks(
   scores: ScoringInput,
   founderAnswers: FounderAnswers,
 ): { allFlags: HallucinationFlag[]; fixedReport: ReportOutput; errorCount: number } {
-  // Run all 5 checks
   const numberFlags = checkNumbers(report, research, scores, founderAnswers);
   const companyFlags = checkCompanyNames(report, research);
   const consistencyFlags = checkScoreTextConsistency(report, scores);
@@ -337,7 +367,7 @@ function runAllChecks(
   // Apply auto-fixes
   let fixedReport = cleaned;
   if (verdictFlags.length > 0) {
-    fixedReport = truncateVerdict(fixedReport);
+    fixedReport = truncateVerdicts(fixedReport);
   }
 
   const allFlags = [
@@ -348,10 +378,7 @@ function runAllChecks(
     ...bannedFlags,
   ];
 
-  // Count error-severity flags from checks 1-3 only (banned words and verdict are auto-fixed)
-  const errorCount = [...numberFlags, ...companyFlags, ...consistencyFlags].filter(
-    (f) => f.severity === 'error',
-  ).length;
+  const errorCount = allFlags.filter((f) => f.severity === 'error').length;
 
   return { allFlags, fixedReport, errorCount };
 }
@@ -379,7 +406,7 @@ export async function validateReport(params: {
     params.founderAnswers,
   );
 
-  if (errorCount <= 5) {
+  if (errorCount <= 3) {
     return { report: fixedReport, flags: allFlags, needsReview: false, attempts: 1 };
   }
 
@@ -391,10 +418,9 @@ export async function validateReport(params: {
   // Retry loop
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     console.warn(
-      `[hallucination] Retry ${attempt}/${maxRetries} -- ${errorCount} error flags exceed threshold of 5`,
+      `[hallucination] Retry ${attempt}/${maxRetries} -- ${errorCount} error flags exceed threshold of 3`,
     );
 
-    // Convert error flags to strings for the correction prompt
     const errorFlagDescriptions = allFlags
       .filter((f) => f.severity === 'error')
       .map((f) => `[${f.check}] ${f.field}: expected ${f.expected}, found ${f.found}`);
@@ -420,19 +446,17 @@ export async function validateReport(params: {
     fixedReport = result.fixedReport;
     errorCount = result.errorCount;
 
-    // Track best attempt
     if (errorCount < bestErrorCount) {
       bestReport = fixedReport;
       bestFlags = allFlags;
       bestErrorCount = errorCount;
     }
 
-    if (errorCount <= 5) {
+    if (errorCount <= 3) {
       return { report: fixedReport, flags: allFlags, needsReview: false, attempts: attempt + 1 };
     }
   }
 
-  // All retries exhausted -- use best attempt
   console.warn(
     `[hallucination] All ${maxRetries} retries exhausted. Using best attempt with ${bestErrorCount} error flags. Flagging needsReview.`,
   );

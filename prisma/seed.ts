@@ -45,50 +45,47 @@ async function seedQuestions() {
   }> = [
     {
       id: 1,
-      questionText: 'What does your product do in one sentence, and who is the primary user?',
+      questionText: 'What does your product do?',
       questionType: QuestionType.text,
-      placeholder: 'e.g., "We help remote teams track async standups. Primary users are engineering managers at 50-200 person companies."',
+      placeholder: 'Describe your product in 1-2 sentences. If you have a URL, include it.',
       options: null,
       displayOrder: 1,
     },
     {
       id: 2,
-      questionText: 'What is the single strongest signal that users find value in your product?',
+      questionText: 'Who is this built for?',
       questionType: QuestionType.text,
-      placeholder: 'e.g., "40% of users who complete onboarding return within 48 hours" or "Users tell us they can\'t go back to their old workflow."',
+      placeholder: 'Be as specific as possible. e.g., "Series A B2B SaaS founders with 10-50 employees hiring their first marketer"',
       options: null,
       displayOrder: 2,
     },
     {
       id: 3,
-      questionText: 'What is your primary distribution channel today?',
+      questionText: 'How do people find and start using it?',
       questionType: QuestionType.single_select,
       placeholder: null,
       options: [
-        { id: 'organic-search', label: 'Organic Search / SEO', value: 'organic-search' },
-        { id: 'paid-ads', label: 'Paid Ads (Google, Meta, etc.)', value: 'paid-ads' },
-        { id: 'social-media', label: 'Social Media / Content', value: 'social-media' },
-        { id: 'referral', label: 'Word of Mouth / Referral', value: 'referral' },
-        { id: 'outbound', label: 'Outbound Sales / Cold Email', value: 'outbound' },
-        { id: 'partnerships', label: 'Partnerships / Integrations', value: 'partnerships' },
-        { id: 'community', label: 'Community / Events', value: 'community' },
-        { id: 'none', label: 'No clear channel yet', value: 'none' },
+        { id: 'self_serve', label: 'They sign up and use it themselves', value: 'self_serve' },
+        { id: 'sales_assisted', label: 'They book a demo or talk to us first', value: 'sales_assisted' },
+        { id: 'founder_led', label: 'I personally sell it — DMs, calls, network', value: 'founder_led' },
+        { id: 'partner_channel', label: 'Through a partner, marketplace, or integration', value: 'partner_channel' },
+        { id: 'undefined', label: "We haven't figured this out yet", value: 'undefined' },
       ],
       displayOrder: 3,
     },
     {
       id: 4,
-      questionText: 'What happens when you ask a paying customer "What would you use if our product didn\'t exist?"',
+      questionText: 'What feels most stuck right now?',
       questionType: QuestionType.text,
-      placeholder: 'e.g., "Most say they\'d go back to spreadsheets" or "They mention Competitor X, but say we\'re easier to use."',
+      placeholder: 'e.g., "Nobody knows about us", "People sign up but never come back", "Users love it but won\'t pay"',
       options: null,
       displayOrder: 4,
     },
     {
       id: 5,
-      questionText: 'What is the biggest risk that could prevent you from reaching PMF in the next 6 months?',
+      questionText: 'Where are you at right now? Users, revenue, timeline — whatever you have.',
       questionType: QuestionType.text,
-      placeholder: 'e.g., "Running out of runway before finding a scalable acquisition channel" or "Enterprise buyers have a 6-month sales cycle we can\'t sustain."',
+      placeholder: 'e.g., "200 beta users, no revenue, 6 months in" or "$8K MRR, 50 paying customers, launched 3 months ago"',
       options: null,
       displayOrder: 5,
     },
@@ -130,25 +127,25 @@ async function seedMicroInsights() {
     insightText: string;
     displayOrder: number;
   }> = [
-    // Question 1
-    { id: 1, questionId: 1, insightText: 'Interesting. Clarity of target user is a strong PMF signal. Let me dig deeper.', displayOrder: 1 },
-    { id: 2, questionId: 1, insightText: 'Got it. Founders who can articulate this in one sentence are 2.3x more likely to find PMF.', displayOrder: 2 },
-    { id: 3, questionId: 1, insightText: 'Clear product definition detected. This is a positive signal for your PMF journey.', displayOrder: 3 },
-    // Question 2
-    { id: 4, questionId: 2, insightText: "That retention signal tells me a lot. Most pre-PMF companies can't point to one metric. You can.", displayOrder: 1 },
-    { id: 5, questionId: 2, insightText: 'Valuable insight. The best PMF signals are behavioral, not verbal. Let me factor this in.', displayOrder: 2 },
-    { id: 6, questionId: 2, insightText: 'This is key data. Return usage patterns are one of the strongest PMF indicators.', displayOrder: 3 },
-    // Question 3
-    { id: 7, questionId: 3, insightText: 'Your channel choice reveals a lot about your growth trajectory. Analyzing implications now.', displayOrder: 1 },
-    { id: 8, questionId: 3, insightText: "Distribution is where most post-MVP startups get stuck. I'm mapping your channel to PMF benchmarks.", displayOrder: 2 },
+    // Question 1: What does your product do?
+    { id: 1, questionId: 1, insightText: 'Got it. Products that can be described in one sentence are 2.3x more likely to find PMF.', displayOrder: 1 },
+    { id: 2, questionId: 1, insightText: 'Clear product definition detected. This helps me identify the right competitive set.', displayOrder: 2 },
+    { id: 3, questionId: 1, insightText: "Noted. I'll compare your positioning against the top players in this space.", displayOrder: 3 },
+    // Question 2: Who is this built for?
+    { id: 4, questionId: 2, insightText: 'ICP specificity is one of the strongest PMF predictors. The more specific, the better.', displayOrder: 1 },
+    { id: 5, questionId: 2, insightText: "Interesting. I'll score this against how focused the top companies in your space are.", displayOrder: 2 },
+    { id: 6, questionId: 2, insightText: 'Got it. Vague ICPs are the #1 reason founders waste runway on the wrong channels.', displayOrder: 3 },
+    // Question 3: How do people find and start using it?
+    { id: 7, questionId: 3, insightText: '72% of SaaS products under $1K/mo use self-serve as their main channel. Let me compare.', displayOrder: 1 },
+    { id: 8, questionId: 3, insightText: "Distribution is where most post-MVP startups get stuck. Mapping your model to category benchmarks.", displayOrder: 2 },
     { id: 9, questionId: 3, insightText: 'Channel-market fit is as important as product-market fit. Noting this for your report.', displayOrder: 3 },
-    // Question 4
-    { id: 10, questionId: 4, insightText: 'The "what would you use instead" test is the Sean Ellis acid test for PMF. Processing your response.', displayOrder: 1 },
-    { id: 11, questionId: 4, insightText: 'Substitution analysis is revealing. This tells me about your competitive moat.', displayOrder: 2 },
-    { id: 12, questionId: 4, insightText: 'This answer reveals your positioning strength. Very few founders ask this question early enough.', displayOrder: 3 },
-    // Question 5
-    { id: 13, questionId: 5, insightText: 'Understanding your perceived risk helps me calibrate the entire analysis. Building your report now.', displayOrder: 1 },
-    { id: 14, questionId: 5, insightText: 'Risk awareness is a PMF superpower. Founders who name their risks clearly overcome them 4x faster.', displayOrder: 2 },
+    // Question 4: What feels most stuck right now?
+    { id: 10, questionId: 4, insightText: "This tells me where to focus the report. I'll cross-reference with what research shows.", displayOrder: 1 },
+    { id: 11, questionId: 4, insightText: "Pain points are signals. I'll map this to the most common failure patterns in your category.", displayOrder: 2 },
+    { id: 12, questionId: 4, insightText: 'Noted. This will drive your primary break analysis and top recommendations.', displayOrder: 3 },
+    // Question 5: Where are you at right now?
+    { id: 13, questionId: 5, insightText: 'Traction data is the foundation for Demand and Trust scoring. Processing now.', displayOrder: 1 },
+    { id: 14, questionId: 5, insightText: 'Median time from beta to first dollar for funded startups: 4.2 months. Let me benchmark you.', displayOrder: 2 },
     { id: 15, questionId: 5, insightText: 'Final piece of the puzzle. I now have enough to generate a comprehensive PMF diagnostic.', displayOrder: 3 },
   ];
 

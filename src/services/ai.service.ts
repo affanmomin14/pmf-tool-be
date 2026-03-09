@@ -8,6 +8,7 @@ import { AIError, SpendLimitError } from '../errors';
 const PRICING: Record<string, { inputCentsPerMillion: number; outputCentsPerMillion: number }> = {
   'gpt-4o': { inputCentsPerMillion: 250, outputCentsPerMillion: 1000 },
   'gpt-4o-mini': { inputCentsPerMillion: 15, outputCentsPerMillion: 60 },
+  'gpt-5': { inputCentsPerMillion: 500, outputCentsPerMillion: 2000 },
 };
 
 /**
@@ -53,6 +54,7 @@ export async function callOpenAI(params: {
   responseFormat?: object;
   temperature?: number;
   maxTokens?: number;
+  model?: string;
 }): Promise<{ content: string; usage: { inputTokens: number; outputTokens: number; totalTokens: number } }> {
   // 1. Check daily spend limit -- hard block
   const todaySpend = await getTodaySpendCents();
@@ -60,20 +62,22 @@ export async function callOpenAI(params: {
     throw new SpendLimitError();
   }
 
-  const model = env.OPENAI_MODEL;
+  const model = params.model || env.OPENAI_MODEL;
   const start = Date.now();
 
   try {
     // 2. Call OpenAI with SDK built-in retry and timeout
     // maxRetries: 1 = 1 retry (2 total attempts). SDK handles 429, 500, timeouts with exponential backoff.
     // timeout: 120_000 = 120 second timeout per request (report generation needs long responses)
+    // GPT-5 only supports temperature=1 (default); omit for GPT-5 models
+    const supportsTemperature = !model.startsWith('gpt-5');
     const response = await openai.chat.completions.create(
       {
         model,
         messages: params.messages,
         response_format: params.responseFormat as any,
-        temperature: params.temperature ?? 0.2,
-        max_tokens: params.maxTokens ?? env.OPENAI_MAX_TOKENS,
+        ...(supportsTemperature ? { temperature: params.temperature ?? 0.2 } : {}),
+        max_completion_tokens: params.maxTokens ?? env.OPENAI_MAX_TOKENS,
       },
       {
         timeout: 120_000,
@@ -164,6 +168,7 @@ export async function callOpenAIWebSearch(params: {
   textFormat?: any;
   temperature?: number;
   maxOutputTokens?: number;
+  model?: string;
 }): Promise<{ outputText: string; usage: { inputTokens: number; outputTokens: number; totalTokens: number } }> {
   // 1. Check daily spend limit -- hard block
   const todaySpend = await getTodaySpendCents();
@@ -171,7 +176,7 @@ export async function callOpenAIWebSearch(params: {
     throw new SpendLimitError();
   }
 
-  const model = env.OPENAI_MODEL;
+  const model = params.model || env.OPENAI_MODEL;
   const start = Date.now();
 
   try {
@@ -184,17 +189,19 @@ export async function callOpenAIWebSearch(params: {
 
     const text = params.textFormat ? { format: params.textFormat } : undefined;
 
+    // GPT-5 only supports temperature=1 (default); omit for GPT-5 models
+    const supportsTemperature = !model.startsWith('gpt-5');
     const response = await openai.responses.create(
       {
         model,
         input: params.input as any,
         tools: tools as any,
         text: text as any,
-        temperature: params.temperature ?? 0.2,
+        ...(supportsTemperature ? { temperature: params.temperature ?? 0.2 } : {}),
         max_output_tokens: params.maxOutputTokens ?? env.OPENAI_MAX_TOKENS,
       },
       {
-        timeout: 30_000,
+        timeout: 60_000,
         maxRetries: 1,
       },
     );
