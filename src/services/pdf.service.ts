@@ -462,14 +462,20 @@ function renderSalesModel(doc: PDFKit.PDFDocument, r: ReportOutput) {
   y += 5;
 
   sm.models_table.forEach((row) => {
-    ensureSpace(doc, 16);
+    const fitH = textH(doc, row.your_fit || '-', F.r, 7, cols[4], 0);
+    const rowH = Math.max(14, fitH + 4);
+    ensureSpace(doc, rowH + 2);
     tx = M.l;
     [row.model, row.who_uses, row.acv_range, row.conversion, row.your_fit].forEach((val, i) => {
       doc.font(i === 0 ? F.b : F.r).fontSize(7).fillColor(i === 0 ? C.text : C.textLight);
-      doc.text(val || '-', tx, y, { width: cols[i], lineBreak: false });
+      if (i === 4) {
+        doc.text(val || '-', tx, y, { width: cols[i] });
+      } else {
+        doc.text(val || '-', tx, y, { width: cols[i], lineBreak: false });
+      }
       tx += cols[i] + 5;
     });
-    y += 16;
+    y += rowH + 2;
   });
   y += 8;
 
@@ -588,22 +594,49 @@ function renderCompetitors(doc: PDFKit.PDFDocument, r: ReportOutput) {
   });
   y += 4;
 
-  // Complaints
-  ensureSpace(doc, 18 + comp.complaints.length * 32);
+  // Complaints — dynamic heights, handle non-numeric percentages
+  ensureSpace(doc, 18 + comp.complaints.length * 40);
   doc.font(F.b).fontSize(7).fillColor(C.textMuted);
   lbl(doc, 'COMPLAINT GAPS (YOUR OPPORTUNITY)', M.l, y);
   y += 14;
 
   comp.complaints.forEach((c) => {
-    ensureSpace(doc, 30);
-    card(doc, M.l, y, W, 26, { accent: C.amber });
-    doc.font(F.b).fontSize(7.5).fillColor(C.amber);
-    lbl(doc, c.percentage, M.l + 12, y + 4);
-    doc.font(F.b).fontSize(7.5).fillColor(C.text);
-    doc.text(c.complaint, M.l + 48, y + 4, { width: W - 60, lineBreak: false });
-    doc.font(F.r).fontSize(6.5).fillColor(C.textLight);
-    doc.text(c.opportunity, M.l + 48, y + 15, { width: W - 60, lineBreak: false });
-    y += 30;
+    const pct = c.percentage || '';
+    const isShortPct = /^\d/.test(pct) && pct.length <= 5;
+
+    const textX = isShortPct ? M.l + 48 : M.l + 12;
+    const textW = isShortPct ? W - 60 : W - 24;
+
+    const complaintH = textH(doc, c.complaint, F.b, 7.5, textW, 1);
+    const oppH = textH(doc, c.opportunity, F.r, 6.5, textW, 1);
+
+    let innerH: number;
+    if (isShortPct) {
+      innerH = 8 + complaintH + 3 + oppH + 8;
+    } else {
+      innerH = 8 + 12 + 4 + complaintH + 3 + oppH + 8;
+    }
+    const cardH = Math.max(innerH, 28);
+
+    ensureSpace(doc, cardH + 6);
+    card(doc, M.l, y, W, cardH, { accent: C.amber });
+
+    if (isShortPct) {
+      doc.font(F.b).fontSize(7.5).fillColor(C.amber);
+      lbl(doc, pct, M.l + 12, y + 8);
+      doc.font(F.b).fontSize(7.5).fillColor(C.text);
+      doc.text(c.complaint, textX, y + 8, { width: textW, lineGap: 1 });
+      doc.font(F.r).fontSize(6.5).fillColor(C.textLight);
+      doc.text(c.opportunity, textX, y + 8 + complaintH + 3, { width: textW, lineGap: 1 });
+    } else {
+      badge(doc, pct || 'N/A', M.l + 12, y + 6, C.amber);
+      const contentY = y + 22;
+      doc.font(F.b).fontSize(7.5).fillColor(C.text);
+      doc.text(c.complaint, textX, contentY, { width: textW, lineGap: 1 });
+      doc.font(F.r).fontSize(6.5).fillColor(C.textLight);
+      doc.text(c.opportunity, textX, contentY + complaintH + 3, { width: textW, lineGap: 1 });
+    }
+    y += cardH + 6;
   });
 
   doc.y = y;
@@ -621,8 +654,14 @@ function renderPositioning(doc: PDFKit.PDFDocument, r: ReportOutput) {
   const curQuoteH = textH(doc, `"${pos.current.text}"`, F.i, 8, innerW, 1);
   const recQuoteH = textH(doc, `"${pos.recommended.text}"`, F.i, 8, innerW, 1);
 
-  const curItemsH = pos.current.critique.length * 14;
-  const recItemsH = pos.recommended.improvements.length * 14;
+  let curItemsH = 0;
+  pos.current.critique.forEach((c) => {
+    curItemsH += textH(doc, `x  ${c}`, F.r, 7, innerW, 0) + 4;
+  });
+  let recItemsH = 0;
+  pos.recommended.improvements.forEach((imp) => {
+    recItemsH += textH(doc, `+  ${imp}`, F.r, 7, innerW, 0) + 4;
+  });
 
   const curH = 24 + curQuoteH + 12 + curItemsH + 10;
   const recH = 24 + recQuoteH + 12 + recItemsH + 10;
@@ -640,9 +679,10 @@ function renderPositioning(doc: PDFKit.PDFDocument, r: ReportOutput) {
   doc.text(`"${pos.current.text}"`, M.l + 12, y + 24, { width: innerW, lineGap: 1 });
   let py = y + 24 + curQuoteH + 10;
   pos.current.critique.forEach((c) => {
+    const ih = textH(doc, `x  ${c}`, F.r, 7, innerW, 0);
     doc.font(F.r).fontSize(7).fillColor(C.textLight);
     doc.text(`x  ${c}`, M.l + 12, py, { width: innerW });
-    py += 14;
+    py += ih + 4;
   });
 
   // Recommended
@@ -654,9 +694,10 @@ function renderPositioning(doc: PDFKit.PDFDocument, r: ReportOutput) {
   doc.text(`"${pos.recommended.text}"`, rx + 12, y + 24, { width: innerW, lineGap: 1 });
   let ry = y + 24 + recQuoteH + 10;
   pos.recommended.improvements.forEach((imp) => {
+    const ih = textH(doc, `+  ${imp}`, F.r, 7, innerW, 0);
     doc.font(F.r).fontSize(7).fillColor(C.textLight);
     doc.text(`+  ${imp}`, rx + 12, ry, { width: innerW });
-    ry += 14;
+    ry += ih + 4;
   });
 
   doc.y = y + maxH + 10;
@@ -684,10 +725,14 @@ function renderBottomLine(doc: PDFKit.PDFDocument, r: ReportOutput) {
   doc.text(bl.verdict_detail, M.l + 14, y + 12 + verdictTH + 8, { width: W - 28, lineGap: 1 });
   y += verdictCardH + 10;
 
-  // Working / Not Working
+  // Working / Not Working — dynamic item heights
   const halfW = (W - 10) / 2;
-  const maxItems = Math.max(bl.working.length, bl.not_working.length);
-  const workH = 24 + maxItems * 14;
+  const itemW = halfW - 24;
+  let workingH = 0;
+  bl.working.forEach((w) => { workingH += textH(doc, `+  ${w}`, F.r, 7, itemW, 0) + 4; });
+  let notWorkingH = 0;
+  bl.not_working.forEach((nw) => { notWorkingH += textH(doc, `x  ${nw}`, F.r, 7, itemW, 0) + 4; });
+  const workH = 24 + Math.max(workingH, notWorkingH) + 6;
   ensureSpace(doc, workH + 8);
 
   card(doc, M.l, y, halfW, workH, { accent: C.emerald });
@@ -695,9 +740,10 @@ function renderBottomLine(doc: PDFKit.PDFDocument, r: ReportOutput) {
   lbl(doc, "WHAT'S WORKING", M.l + 12, y + 8);
   let wy = y + 22;
   bl.working.forEach((w) => {
+    const ih = textH(doc, `+  ${w}`, F.r, 7, itemW, 0);
     doc.font(F.r).fontSize(7).fillColor(C.textLight);
-    doc.text(`+  ${w}`, M.l + 12, wy, { width: halfW - 24 });
-    wy += 14;
+    doc.text(`+  ${w}`, M.l + 12, wy, { width: itemW });
+    wy += ih + 4;
   });
 
   card(doc, M.l + halfW + 10, y, halfW, workH, { accent: C.red });
@@ -705,9 +751,10 @@ function renderBottomLine(doc: PDFKit.PDFDocument, r: ReportOutput) {
   lbl(doc, "WHAT'S NOT WORKING", M.l + halfW + 22, y + 8);
   let nwy = y + 22;
   bl.not_working.forEach((nw) => {
+    const ih = textH(doc, `x  ${nw}`, F.r, 7, itemW, 0);
     doc.font(F.r).fontSize(7).fillColor(C.textLight);
-    doc.text(`x  ${nw}`, M.l + halfW + 22, nwy, { width: halfW - 24 });
-    nwy += 14;
+    doc.text(`x  ${nw}`, M.l + halfW + 22, nwy, { width: itemW });
+    nwy += ih + 4;
   });
   y += workH + 10;
 
@@ -787,10 +834,10 @@ function renderRecommendations(doc: PDFKit.PDFDocument, r: ReportOutput) {
     doc.restore();
 
     doc.font(F.b).fontSize(9).fillColor(C.text);
-    lbl(doc, rec.title, M.l + 38, y + 10);
-    badge(doc, `${rec.effort} effort`, M.l + W - 100, y + 10, ec);
+    doc.text(rec.title, M.l + 38, y + 10, { width: W - 180, lineBreak: false });
+    badge(doc, `${rec.effort} effort`, M.l + W - 110, y + 10, ec);
     doc.font(F.r).fontSize(6.5).fillColor(C.textMuted);
-    lbl(doc, rec.timeline, M.l + W - 40, y + 12);
+    lbl(doc, rec.timeline, M.l + W - 46, y + 12);
 
     doc.font(F.r).fontSize(7.5).fillColor(C.text);
     doc.text(rec.action, M.l + 38, y + 26, { width: W - 52, lineGap: 1 });
