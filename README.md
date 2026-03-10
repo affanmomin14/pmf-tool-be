@@ -19,3 +19,7 @@ Fixed LOG_LEVEL and RESEND_FROM_EMAIL validation errors.
 
 ## Added RESEND_FROM_EMAIL Secret
 Added missing RESEND_FROM_EMAIL to GitHub Secrets.
+
+
+## Fixed Email Domain
+Updated RESEND_FROM_EMAIL to use verified resend.dev domain.
