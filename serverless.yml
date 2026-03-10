@@ -1,0 +1,309 @@
+service: pmf-tool-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  timeout: 900  # 15 minutes for AI processing
+  memorySize: 1024
+  
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: ${env:DATABASE_URL}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    RESEND_API_KEY: ${env:RESEND_API_KEY}
+    RESEND_FROM_EMAIL: ${env:RESEND_FROM_EMAIL}
+    FRONTEND_URL: ${env:FRONTEND_URL, 'https://pmf-tool.amplifyapp.com'}
+    CORS_ORIGINS: ${env:CORS_ORIGINS, 'https://pmf-tool.amplifyapp.com'}
+    DAILY_SPEND_LIMIT_CENTS: ${env:DAILY_SPEND_LIMIT_CENTS, '5000'}
+    OPENAI_MODEL: ${env:OPENAI_MODEL, 'gpt-4o'}
+    OPENAI_REPORT_MODEL: ${env:OPENAI_REPORT_MODEL, 'gpt-4o'}
+    OPENAI_RESEARCH_MODEL: ${env:OPENAI_RESEARCH_MODEL, 'gpt-4o'}
+    LOG_LEVEL: ${env:LOG_LEVEL, 'info'}
+    PORT: 3001
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - rds:DescribeDBInstances
+            - rds:DescribeDBClusters
+          Resource: '*'
+
+plugins:
+  - serverless-offline
+  - serverless-dotenv-plugin
+
+custom:
+  dotenv:
+    path: .env.${self:provider.stage}
+    basePath: ./
+    include:
+      - DATABASE_URL
+      - OPENAI_API_KEY
+      - RESEND_API_KEY
+      - RESEND_FROM_EMAIL
+
+functions:
+  api:
+    handler: dist/lambda.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+    vpc:
+      securityGroupIds:
+        - ${env:VPC_SECURITY_GROUP_ID}
+      subnetIds:
+        - ${env:VPC_SUBNET_ID_1}
+        - ${env:VPC_SUBNET_ID_2}
+
+package:
+  exclude:
+    - node_modules/**
+    - src/**
+    - .git/**
+    - .env*
+    - README.md
+    - docker-compose.yml
+    - Dockerfile
+    - render.yaml
+  include:
+    - dist/**
+    - prisma/schema.prisma
+    - package.json
+
+resources:
+  Resources:
+    # RDS PostgreSQL Database
+    PMFDatabase:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        DBInstanceIdentifier: pmf-tool-${self:provider.stage}
+        DBInstanceClass: db.t3.micro
+        Engine: postgres
+        EngineVersion: '15.4'
+        MasterUsername: pmfadmin
+        MasterUserPassword: ${env:DB_PASSWORD}
+        AllocatedStorage: 20
+        StorageType: gp2
+        VPCSecurityGroups:
+          - !Ref DatabaseSecurityGroup
+        DBSubnetGroupName: !Ref DatabaseSubnetGroup
+        BackupRetentionPeriod: 7
+        MultiAZ: false
+        PubliclyAccessible: false
+        StorageEncrypted: true
+        DeletionProtection: false
+
+    # VPC Configuration
+    PMFVpc:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/16
+        EnableDnsHostnames: true
+        EnableDnsSupport: true
+        Tags:
+          - Key: Name
+            Value: pmf-tool-vpc-${self:provider.stage}
+
+    # Public Subnets (for Lambda NAT Gateway access)
+    PublicSubnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref PMFVpc
+        CidrBlock: 10.0.1.0/24
+        AvailabilityZone: ${self:provider.region}a
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: pmf-tool-public-1-${self:provider.stage}
+
+    PublicSubnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref PMFVpc
+        CidrBlock: 10.0.2.0/24
+        AvailabilityZone: ${self:provider.region}b
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: pmf-tool-public-2-${self:provider.stage}
+
+    # Private Subnets (for RDS)
+    PrivateSubnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref PMFVpc
+        CidrBlock: 10.0.3.0/24
+        AvailabilityZone: ${self:provider.region}a
+        Tags:
+          - Key: Name
+            Value: pmf-tool-private-1-${self:provider.stage}
+
+    PrivateSubnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref PMFVpc
+        CidrBlock: 10.0.4.0/24
+        AvailabilityZone: ${self:provider.region}b
+        Tags:
+          - Key: Name
+            Value: pmf-tool-private-2-${self:provider.stage}
+
+    # Internet Gateway
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+      Properties:
+        Tags:
+          - Key: Name
+            Value: pmf-tool-igw-${self:provider.stage}
+
+    InternetGatewayAttachment:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        InternetGatewayId: !Ref InternetGateway
+        VpcId: !Ref PMFVpc
+
+    # NAT Gateway for Lambda internet access
+    NatGateway1EIP:
+      Type: AWS::EC2::EIP
+      DependsOn: InternetGatewayAttachment
+      Properties:
+        Domain: vpc
+
+    NatGateway1:
+      Type: AWS::EC2::NatGateway
+      Properties:
+        AllocationId: !GetAtt NatGateway1EIP.AllocationId
+        SubnetId: !Ref PublicSubnet1
+
+    # Route Tables
+    PublicRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref PMFVpc
+        Tags:
+          - Key: Name
+            Value: pmf-tool-public-routes-${self:provider.stage}
+
+    DefaultPublicRoute:
+      Type: AWS::EC2::Route
+      DependsOn: InternetGatewayAttachment
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId: !Ref InternetGateway
+
+    PublicSubnet1RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        SubnetId: !Ref PublicSubnet1
+
+    PublicSubnet2RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        SubnetId: !Ref PublicSubnet2
+
+    PrivateRouteTable1:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref PMFVpc
+        Tags:
+          - Key: Name
+            Value: pmf-tool-private-routes-1-${self:provider.stage}
+
+    DefaultPrivateRoute1:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable1
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId: !Ref NatGateway1
+
+    PrivateSubnet1RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable1
+        SubnetId: !Ref PrivateSubnet1
+
+    PrivateSubnet2RouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PrivateRouteTable1
+        SubnetId: !Ref PrivateSubnet2
+
+    # Security Groups
+    LambdaSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: pmf-tool-lambda-sg-${self:provider.stage}
+        GroupDescription: Security group for PMF Tool Lambda functions
+        VpcId: !Ref PMFVpc
+        SecurityGroupEgress:
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
+
+    DatabaseSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: pmf-tool-db-sg-${self:provider.stage}
+        GroupDescription: Security group for PMF Tool RDS database
+        VpcId: !Ref PMFVpc
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 5432
+            ToPort: 5432
+            SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+    # DB Subnet Group
+    DatabaseSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupName: pmf-tool-db-subnet-group-${self:provider.stage}
+        DBSubnetGroupDescription: Subnet group for PMF Tool RDS database
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+        Tags:
+          - Key: Name
+            Value: pmf-tool-db-subnet-group-${self:provider.stage}
+
+  Outputs:
+    ApiUrl:
+      Description: API Gateway endpoint URL
+      Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+      Export:
+        Name: ${self:service}-${self:provider.stage}-api-url
+
+    DatabaseEndpoint:
+      Description: RDS instance endpoint
+      Value: !GetAtt PMFDatabase.Endpoint.Address
+      Export:
+        Name: ${self:service}-${self:provider.stage}-db-endpoint
+
+    VpcId:
+      Description: VPC ID
+      Value: !Ref PMFVpc
+      Export:
+        Name: ${self:service}-${self:provider.stage}-vpc-id
+
+    LambdaSecurityGroupId:
+      Description: Lambda Security Group ID
+      Value: !Ref LambdaSecurityGroup
+      Export:
+        Name: ${self:service}-${self:provider.stage}-lambda-sg-id
+
+    PrivateSubnetIds:
+      Description: Private Subnet IDs
+      Value: !Join [',', [!Ref PrivateSubnet1, !Ref PrivateSubnet2]]
+      Export:
+        Name: ${self:service}-${self:provider.stage}-private-subnet-ids
