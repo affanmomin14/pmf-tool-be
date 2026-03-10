@@ -15,3 +15,7 @@ Tue Mar 10 16:46:50 IST 2026
 
 ## Environment Fix
 Fixed LOG_LEVEL and RESEND_FROM_EMAIL validation errors.
+
+
+## Added RESEND_FROM_EMAIL Secret
+Added missing RESEND_FROM_EMAIL to GitHub Secrets.
