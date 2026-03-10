@@ -460,6 +460,7 @@ export async function validateReport(params: {
   research: ResearchOutput;
   scores: ScoringInput;
   report: ReportOutput;
+  classificationData?: any;
   maxRetries?: number;
 }): Promise<{
   report: ReportOutput;
@@ -502,6 +503,7 @@ export async function validateReport(params: {
         founderAnswers: params.founderAnswers,
         research: params.research,
         scores: params.scores,
+        classificationData: params.classificationData,
       },
       errorFlagDescriptions,
     );

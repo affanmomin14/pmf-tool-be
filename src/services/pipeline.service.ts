@@ -369,6 +369,7 @@ export async function runFullPipeline(assessmentId: string) {
       founderAnswers,
       research,
       scores: scoringInput,
+      classificationData: classification,
     });
     log.stepEnd('GENERATE REPORT', {
       productName: rawReport.header.product_name,
@@ -396,6 +397,7 @@ export async function runFullPipeline(assessmentId: string) {
       research,
       scores: scoringInput,
       report: rawReport,
+      classificationData: classification,
     });
     const errorFlags = validated.flags.filter((f: any) => f.severity === 'error');
     const warnFlags = validated.flags.filter((f: any) => f.severity === 'warning');

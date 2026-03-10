@@ -18,7 +18,7 @@ const SYSTEM_PROMPT = `You are a PMF (Product-Market Fit) diagnostic analyst gen
 
 ## CORE RULES
 
-1. DATA ANCHORING: Every statistic in the market section MUST come from research_findings. If research_findings has null for a field, say "Data not available" -- NEVER estimate or fabricate numbers.
+1. DATA ANCHORING: Every statistic in the market section MUST come from research_findings. For numeric fields (TAM, SAM, growth rate, funding, G2 ratings): if research has null, use "Data not available". NEVER estimate or fabricate specific numbers.
 
 2. SCORE INJECTION: The scorecard dimension scores MUST exactly match the values in pre_computed_scores. Do NOT recalculate scores.
 
@@ -27,6 +27,15 @@ const SYSTEM_PROMPT = `You are a PMF (Product-Market Fit) diagnostic analyst gen
 4. COMPLAINT GROUNDING: For the competitors.complaints section, use ONLY the complaint themes from research_findings. Map each theme to a concrete opportunity for the founder.
 
 5. Do not end any section with a summary sentence, a motivational line, or a transition to the next section. Just stop when the point is made.
+
+6. NEVER USE "Data not available" AS YOUR ONLY ANALYSIS. When specific research data is unavailable, you MUST still provide actionable analysis based on:
+   - The founder's own answers (product description, ICP, distribution model, traction data)
+   - Classification data (category, likely competitors, ICP extraction)
+   - General market knowledge that is well-established and widely known
+   - Logical inferences from the data you DO have
+   For example, if market TAM data is null but the product is in "Business Intelligence Software", reference well-known market sizing for that sector. If competitor G2 data is unavailable, still describe known competitors by their market position and product focus.
+
+7. REALITY CHECK RESEARCH_SHOWS MUST NEVER BE JUST "Data not available": For each comparison, synthesize what you know from research data, classification likely_competitors, founder context, and general market knowledge. Example: Instead of "Data not available", write "The BI market is dominated by Tableau, Power BI, and Looker with combined market share exceeding 60%, making differentiation critical for new entrants."
 
 ## BANNED WORDS
 Do NOT use: leverage, synergy, unlock, empower, cutting-edge, game-changing, robust, scalable, disruptive, innovative, holistic, paradigm, ecosystem, streamline, optimize (unless literal code optimization), drive (as "drive growth"), navigate, landscape (say "competitive set" or "competitors").
@@ -129,9 +138,9 @@ Given a scheduling tool for freelancers with limited research data:
 {
   "header": { "product_name": "CalSync", "category": "Scheduling Software", "pmf_score": 28, "benchmark_score": 65, "pmf_stage": "pre_pmf", "primary_break": "Demand", "category_risk": "high", "verdict": "CalSync has a clear product idea but no validated demand signal — the scheduling market is saturated and the ICP is too broad to cut through." },
   "reality_check": { "comparisons": [
-    { "you_said": "We built a scheduling tool that syncs across all calendars", "research_shows": "Calendly (4.7/5 G2, $350M raised) already dominates multi-calendar sync with 85% market awareness", "severity": "critical", "question_ref": "q1" },
-    { "you_said": "Freelancers who juggle multiple clients", "research_shows": "Data not available — no G2 category exists for freelancer-specific scheduling", "severity": "warning", "question_ref": "q2" },
-    { "you_said": "Product-led, free tier", "research_shows": "Top 3 scheduling tools all use freemium PLG but convert at <3% to paid", "severity": "warning", "question_ref": "q3" }
+    { "you_said": "We built a scheduling tool that syncs across all calendars", "research_shows": "Calendly (4.7/5 G2, $350M raised) already dominates multi-calendar sync with 85% market awareness — new entrants need a specific wedge to compete", "severity": "critical", "question_ref": "q1" },
+    { "you_said": "Freelancers who juggle multiple clients", "research_shows": "No G2 category exists for freelancer-specific scheduling, suggesting this is an unvalidated niche — most scheduling tools target teams and enterprises, not individual freelancers", "severity": "warning", "question_ref": "q2" },
+    { "you_said": "Product-led, free tier", "research_shows": "Top 3 scheduling tools (Calendly, Cal.com, SavvyCal) all use freemium PLG but convert at <3% to paid, indicating high competition for free users", "severity": "warning", "question_ref": "q3" }
   ], "root_cause": "The product solves a real friction but targets a segment (freelancers) with low willingness to pay in a market owned by well-funded incumbents." },
   "bottom_line": { "verdict": "CalSync needs to find a niche within scheduling that incumbents ignore before investing in growth.", "verdict_detail": "The $850M scheduling market grows at 12% CAGR but is dominated by 3 players with >$1B combined funding. Without a differentiated wedge, PLG acquisition will be prohibitively expensive.", "working": ["Core sync technology works across 4 calendar providers", "Free tier drives initial signups"], "not_working": ["No clear differentiator from Calendly's free tier", "ICP too broad — freelancers span 50+ verticals", "Zero organic search presence for target keywords"], "score_progression": [{"label": "Now", "score": "28", "detail": "Pre-PMF, no validated demand"}, {"label": "After Sprint 0", "score": "38", "detail": "Niche ICP defined, 10 interviews done"}, {"label": "6-month target", "score": "52", "detail": "Niche traction with paying users"}], "one_thing": {"title": "Run 15 discovery calls with freelance designers to validate willingness to pay for team scheduling", "explanation": "Freelancers are too broad. Freelance designers who manage client meetings are a testable niche. 15 calls in 2 weeks will reveal if scheduling pain is acute enough to pay $10/mo, which determines whether this market is viable."}, "research_stats": [{"number": "$850M", "label": "TAM"}, {"number": "12%", "label": "CAGR"}] }
 }
@@ -151,9 +160,10 @@ function buildReportUserMessage(
   founderAnswers: FounderAnswers,
   research: ResearchOutput,
   scores: ScoringInput,
+  classificationData?: any,
   researchQuality?: ResearchQuality,
 ): string {
-  // Pre-process research to explicitly mark nulls as "Data not available" to prevent hallucinations
+  // Pre-process research to explicitly mark nulls for numeric/specific fields
   const processedResearch = JSON.parse(JSON.stringify(research));
 
   // Extract all source URLs to make them prominent in the prompt
@@ -161,57 +171,96 @@ function buildReportUserMessage(
 
   if (processedResearch.competitors) {
     processedResearch.competitors.forEach((c: any) => {
-      Object.keys(c).forEach(k => {
-        if (c[k] === null) c[k] = "Data not available";
-      });
       if (c.sourceUrl) sourceUrls.add(c.sourceUrl);
+      // Only mark strictly numeric fields as "Data not available"
+      if (c.g2Rating === null) c.g2Rating = "Not found on G2";
+      if (c.reviewCount === null) c.reviewCount = "Not found on G2";
+      if (c.funding === null) c.funding = "Not publicly disclosed";
+      if (c.pricingModel === null) c.pricingModel = "Not found";
+      if (c.freeTier === null) c.freeTier = "Unknown";
     });
   }
 
   if (processedResearch.market) {
-    Object.keys(processedResearch.market).forEach(k => {
-      if (processedResearch.market[k] === null) processedResearch.market[k] = "Data not available";
-    });
+    if (processedResearch.market.tam === null) processedResearch.market.tam = "No TAM data found in research";
+    if (processedResearch.market.sam === null) processedResearch.market.sam = "No SAM data found in research";
+    if (processedResearch.market.growthRate === null) processedResearch.market.growthRate = "No growth rate found in research";
   }
 
   if (processedResearch.complaints) {
     processedResearch.complaints.forEach((c: any) => {
-      if (c.percentage === null) c.percentage = "Data not available";
+      if (c.percentage === null) c.percentage = "Not quantified";
       if (c.sourceUrl) sourceUrls.add(c.sourceUrl);
     });
   }
 
   if (processedResearch.patterns?.topCompanies) {
     processedResearch.patterns.topCompanies.forEach((c: any) => {
-      Object.keys(c).forEach(k => {
-        if (c[k] === null) c[k] = "Data not available";
-      });
+      if (c.salesModel === null) c.salesModel = "Not determined";
+      if (c.positioning === null) c.positioning = "Not found";
       if (c.sourceUrl) sourceUrls.add(c.sourceUrl);
     });
   }
+
+  // Build classification context for the LLM
+  const classificationContext = classificationData ? `
+### Classification Context (from AI analysis of founder answers)
+- Category: ${classificationData.category} / ${classificationData.sub_category}
+- Category confidence: ${classificationData.category_confidence}
+- Problem type: ${classificationData.problem_type}
+- ICP specificity: ${classificationData.icp_specificity}/5
+- ICP extracted: ${JSON.stringify(classificationData.icp_extracted || {})}
+- Product signals: ${JSON.stringify(classificationData.product_signals || {})}
+- Business model: ${classificationData.business_model}
+- Traction metrics: ${JSON.stringify(classificationData.traction_metrics || {})}
+- Known competitors (from classification): ${(classificationData.likely_competitors || []).join(', ') || 'None identified'}` : '';
 
   let message = `## IMMUTABLE INPUTS -- DO NOT MODIFY THESE VALUES
 
 ### Founder Answers
 ${JSON.stringify(founderAnswers, null, 2)}
+${classificationContext}
 
-### Research Findings (Nulls replaced with "Data not available")
+### Research Findings
 ${JSON.stringify(processedResearch, null, 2)}
 
 ### Source URLs Collected from Research
-${sourceUrls.size > 0 ? Array.from(sourceUrls).join('\\n') : 'No source URLs available.'}
-(Use these URLs to populated the sources section)
+${sourceUrls.size > 0 ? Array.from(sourceUrls).join('\\n') : 'No source URLs available from web search.'}
+(Use these URLs to populate the sources section. If no URLs, use "Industry analysis" as the source.)
 
 ### Pre-Computed Scores (USE THESE EXACTLY)
 ${JSON.stringify(scores, null, 2)}`;
 
-  // Thin research handling
+  // Thin/minimal research handling -- give explicit instructions
   if (researchQuality && (researchQuality.overall === 'thin' || researchQuality.overall === 'minimal')) {
     message += `
 
-## RESEARCH QUALITY NOTICE
+## CRITICAL: LIMITED RESEARCH DATA — ENHANCED ANALYSIS REQUIRED
 Research data is limited (quality: ${researchQuality.overall}, competitors: ${researchQuality.competitorCount}, market data: ${researchQuality.hasMarketData ? 'yes' : 'no'}, complaints: ${researchQuality.complaintCount}).
-Focus recommendations on founder-actionable items that don't require market data.`;
+
+Because research data is limited, you MUST:
+
+1. **Reality Check section**: For each comparison, provide substantive analysis even without web research data. Use:
+   - The classification's known competitors list (${(classificationData?.likely_competitors || []).join(', ')})
+   - General knowledge about the ${classificationData?.category || 'software'} market
+   - Inferences from what the founder told you (traction, ICP, distribution)
+   - NEVER leave research_shows as just "Data not available". Always provide at least 1-2 sentences of analysis.
+
+2. **Market section**: If TAM/SAM/growth is unavailable from web research:
+   - Use well-known industry estimates for the ${classificationData?.category || 'software'} market
+   - State clearly these are industry estimates, not verified figures
+   - Still populate the regions array with major market regions
+
+3. **Competitors section**: Even with limited research:
+   - Use the classification's known competitors: ${(classificationData?.likely_competitors || []).join(', ')}
+   - Provide what you know about these companies from general knowledge
+   - For complaints, infer common pain points in the ${classificationData?.sub_category || 'software'} space
+
+4. **Sales Model section**: Analyze based on the founder's stated distribution model and how top companies in this space typically sell.
+
+5. **Sources section**: If no web sources available, cite "Industry analysis" and "Founder-provided data" as sources.
+
+6. **Recommendations**: Focus on founder-actionable items that validate assumptions and fill data gaps.`;
   }
 
   return message;
@@ -282,11 +331,12 @@ export async function generateReport(params: {
   founderAnswers: FounderAnswers;
   research: ResearchOutput;
   scores: ScoringInput;
+  classificationData?: any;
 }): Promise<ReportOutput> {
   const researchQuality = typeof params.research.researchQuality === 'object'
     ? params.research.researchQuality as ResearchQuality
     : undefined;
-  const userMessage = buildReportUserMessage(params.founderAnswers, params.research, params.scores, researchQuality);
+  const userMessage = buildReportUserMessage(params.founderAnswers, params.research, params.scores, params.classificationData, researchQuality);
 
   const result = await callOpenAI({
     assessmentId: params.assessmentId,
@@ -332,13 +382,14 @@ export async function generateReportWithCorrections(
     founderAnswers: FounderAnswers;
     research: ResearchOutput;
     scores: ScoringInput;
+    classificationData?: any;
   },
   previousFlags: string[],
 ): Promise<ReportOutput> {
   const researchQuality = typeof params.research.researchQuality === 'object'
     ? params.research.researchQuality as ResearchQuality
     : undefined;
-  const userMessage = buildReportUserMessage(params.founderAnswers, params.research, params.scores, researchQuality);
+  const userMessage = buildReportUserMessage(params.founderAnswers, params.research, params.scores, params.classificationData, researchQuality);
 
   const correctionSection = `\n\n## CORRECTION REQUIRED\nThe previous report had the following issues:\n${previousFlags.map((f) => `- ${f}`).join('\n')}\nPlease regenerate the report fixing these specific issues.`;
 
