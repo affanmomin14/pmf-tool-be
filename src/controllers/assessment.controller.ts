@@ -5,6 +5,7 @@ import * as researchService from '../services/research.service';
 import * as scoringService from '../services/scoring.service';
 import { hashIp } from '../utils/hash';
 import { logger } from '../config/logger';
+import { invokePipelineAsync } from '../services/lambda-invoke.service';
 
 export const createAssessment = async (req: Request, res: Response) => {
   const start = Date.now();
@@ -24,8 +25,25 @@ export const getAssessment = async (req: Request, res: Response) => {
   const id = req.params.id as string;
   logger.info(`[API] GET /assessments/${id.slice(0, 8)}…`);
   const assessment = await assessmentService.getAssessmentWithResponses(id);
+
+  let reportInfo = null;
+  if (assessment.status === 'report_generated' || assessment.status === 'unlocked') {
+    reportInfo = await assessmentService.getReportInfoByAssessmentId(id);
+  }
+
   logger.info(`[API] GET /assessments/${id.slice(0, 8)}… → 200 — status=${assessment.status}, responses=${assessment.responses.length} (${Date.now() - start}ms)`);
-  res.json({ success: true, data: assessment });
+  res.json({
+    success: true,
+    data: {
+      ...assessment,
+      ...(reportInfo && {
+        reportToken: reportInfo.urlToken,
+        previewContent: reportInfo.previewContent,
+        pmfScore: reportInfo.pmfScore,
+        pmfStage: reportInfo.pmfStage,
+      }),
+    },
+  });
 };
 
 export const createResponse = async (req: Request, res: Response) => {
@@ -41,18 +59,26 @@ export const createResponse = async (req: Request, res: Response) => {
 };
 
 export const completeAssessment = async (req: Request, res: Response) => {
-  const start = Date.now();
   const id = req.params.id as string;
-  logger.info('');
-  logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  logger.info(`[API] POST /assessments/${id.slice(0, 8)}…/complete — STARTING FULL PIPELINE`);
-  logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  const result = await pipelineService.runFullPipeline(id);
-  logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  logger.info(`[API] POST /assessments/${id.slice(0, 8)}…/complete → 200 — pmfScore=${result.pmfScore}, pmfStage=${result.pmfStage} (${Date.now() - start}ms total)`);
-  logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  logger.info('');
-  res.json({ success: true, data: result });
+  logger.info(`[API] POST /assessments/${id.slice(0, 8)}…/complete`);
+
+  const assessment = await assessmentService.getAssessmentWithResponses(id);
+
+  // If the report already exists, return it immediately (idempotent)
+  if (assessment.status === 'report_generated' || assessment.status === 'unlocked') {
+    logger.info(`[API] POST /assessments/${id.slice(0, 8)}…/complete → 200 (cached)`);
+    const cached = await pipelineService.runFullPipeline(id);
+    return res.json({ success: true, data: cached });
+  }
+
+  // Fire async Lambda invocation for the pipeline (it handles status transitions internally)
+  await invokePipelineAsync(id);
+
+  logger.info(`[API] POST /assessments/${id.slice(0, 8)}…/complete → 202 (async pipeline started)`);
+  res.status(202).json({
+    success: true,
+    data: { status: 'processing', assessmentId: id },
+  });
 };
 
 export const runResearch = async (req: Request, res: Response) => {

@@ -86,6 +86,18 @@ export const getAssessmentWithResponses = async (id: string) => {
   return assessment;
 };
 
+export const getReportInfoByAssessmentId = async (assessmentId: string) => {
+  return prisma.report.findUnique({
+    where: { assessmentId },
+    select: {
+      urlToken: true,
+      previewContent: true,
+      pmfScore: true,
+      pmfStage: true,
+    },
+  });
+};
+
 export const transitionStatus = async (
   assessmentId: string,
   newStatus: AssessmentStatus,
