@@ -5,7 +5,7 @@ import { z } from 'zod/v4';
 // ============================================================================
 
 export interface ScoringInput {
-  dimensions: Array<{ dimension: string; score: number; label: string; weight: number }>;
+  dimensions: Array<{ dimension: string; score: number; label: string; weight: number; confidence: 'low' | 'medium' | 'high' }>;
   pmfScore: number;
   pmfStage: 'pre_pmf' | 'approaching' | 'early_pmf' | 'strong';
   primaryBreak: string;
@@ -67,7 +67,7 @@ const scorecardDimensionSchema = z.object({
   benchmark: z.number().int().min(1).max(10),
   status: z.enum(['critical', 'at_risk', 'on_track', 'strong']),
   evidence: z.string(),
-  confidence: z.enum(['low', 'medium', 'high']).optional(),
+  confidence: z.enum(['low', 'medium', 'high']),
 });
 
 const scorecardSchema = z.object({

@@ -172,6 +172,7 @@ function buildScoringInputForReport(scoreData: ScoreData): ScoringInput {
       score: scoreData.dimensions[key as keyof typeof scoreData.dimensions].score,
       label: scoreToLabel(scoreData.dimensions[key as keyof typeof scoreData.dimensions].score),
       weight: scoreData.weights[key],
+      confidence: scoreData.dimensions[key as keyof typeof scoreData.dimensions].confidence,
     })),
     pmfScore: scoreData.finalScore,
     pmfStage: scoreData.pmfStage,

@@ -292,7 +292,70 @@ export function truncateVerdicts(report: ReportOutput): ReportOutput {
 }
 
 // ============================================================================
-// Check 5 -- Banned word detection and replacement (HVAL-05)
+// Check 5 -- Gibberish / garbled text detection (HVAL-05)
+// Known OpenAI API bug: gpt-4o sometimes returns consonant-heavy nonsense
+// e.g. "hprducssrugggwhdmd" instead of "the product is struggling with demand"
+// ============================================================================
+
+const VOWELS = /[aeiouAEIOU]/g;
+
+function isGibberish(text: string): boolean {
+  if (!text || text.length < 12) return false;
+  const words = text.split(/[\s,;:.()\[\]{}"/]+/).filter(w => {
+    if (w.length < 5) return false;
+    if (/^\d/.test(w)) return false;
+    if (/^[A-Z]{2,}$/.test(w)) return false;
+    if (/^https?:/.test(w)) return false;
+    if (/^[A-Z][a-z]+$/.test(w) && w.length <= 8) return false;
+    return true;
+  });
+  if (words.length === 0) return false;
+  let garbledCount = 0;
+  for (const word of words) {
+    const vowelCount = (word.match(VOWELS) || []).length;
+    if (vowelCount / word.length < 0.15) garbledCount++;
+  }
+  return garbledCount / words.length > 0.4;
+}
+
+export function checkGibberish(report: ReportOutput): HallucinationFlag[] {
+  const flags: HallucinationFlag[] = [];
+  const fieldsToCheck: Array<{ path: string; text: string }> = [
+    { path: 'header.verdict', text: report.header.verdict },
+    { path: 'reality_check.root_cause', text: report.reality_check.root_cause },
+    { path: 'bottom_line.verdict', text: report.bottom_line.verdict },
+    { path: 'bottom_line.verdict_detail', text: report.bottom_line.verdict_detail },
+    { path: 'market.real_number_analysis', text: report.market.real_number_analysis },
+    { path: 'sales_model.diagnosis', text: report.sales_model.diagnosis },
+  ];
+  for (const comp of report.reality_check.comparisons) {
+    fieldsToCheck.push({ path: `reality_check.research_shows(${comp.question_ref})`, text: comp.research_shows });
+  }
+  for (const dim of report.scorecard.dimensions) {
+    fieldsToCheck.push({ path: `scorecard.${dim.name}.evidence`, text: dim.evidence });
+  }
+  for (const rec of report.recommendations) {
+    fieldsToCheck.push({ path: `recommendation.${rec.rank}.evidence`, text: rec.evidence });
+  }
+  for (const item of report.bottom_line.not_working) {
+    fieldsToCheck.push({ path: 'bottom_line.not_working', text: item });
+  }
+  for (const { path, text } of fieldsToCheck) {
+    if (isGibberish(text)) {
+      flags.push({
+        check: 'gibberish_detection',
+        field: path,
+        expected: 'Readable English text',
+        found: `Garbled text: "${text.slice(0, 80)}..."`,
+        severity: 'error',
+      });
+    }
+  }
+  return flags;
+}
+
+// ============================================================================
+// Check 6 -- Banned word detection and replacement (HVAL-06)
 // ============================================================================
 
 const BANNED_WORD_MAP: Record<string, string> = {
@@ -358,13 +421,21 @@ function runAllChecks(
   scores: ScoringInput,
   founderAnswers: FounderAnswers,
 ): { allFlags: HallucinationFlag[]; fixedReport: ReportOutput; errorCount: number } {
+  const gibberishFlags = checkGibberish(report);
+  if (gibberishFlags.length > 0) {
+    return {
+      allFlags: gibberishFlags,
+      fixedReport: report,
+      errorCount: gibberishFlags.length,
+    };
+  }
+
   const numberFlags = checkNumbers(report, research, scores, founderAnswers);
   const companyFlags = checkCompanyNames(report, research);
   const consistencyFlags = checkScoreTextConsistency(report, scores);
   const verdictFlags = checkVerdictLength(report);
   const { flags: bannedFlags, cleaned } = checkAndReplaceBannedWords(report);
 
-  // Apply auto-fixes
   let fixedReport = cleaned;
   if (verdictFlags.length > 0) {
     fixedReport = truncateVerdicts(fixedReport);

@@ -107,6 +107,13 @@ export async function callOpenAI(params: {
       },
     });
 
+    const finishReason = response.choices[0].finish_reason;
+    if (finishReason === 'length') {
+      throw new AIError(
+        `Response truncated (finish_reason=length, ${outputTokens} output tokens). Increase max_completion_tokens or reduce prompt size.`
+      );
+    }
+
     return {
       content: response.choices[0].message.content!,
       usage: { inputTokens, outputTokens, totalTokens },
