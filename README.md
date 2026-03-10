@@ -11,3 +11,7 @@ Deployed via GitHub Actions to AWS Lambda in ap-south-1.
 
 ## Last Updated
 Tue Mar 10 16:46:50 IST 2026
+
+
+## Environment Fix
+Fixed LOG_LEVEL and RESEND_FROM_EMAIL validation errors.
