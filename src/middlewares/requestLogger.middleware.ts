@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { logger } from '../config/logger';
 
 export const requestLogger = pinoHttp({
-  logger,
+  logger: logger as any,
   genReqId: (req) => (req.headers['x-request-id'] as string) || randomUUID(),
   customLogLevel: (_req, res, err) => {
     if (res.statusCode >= 500 || err) return 'error';
