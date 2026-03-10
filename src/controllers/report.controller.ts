@@ -44,7 +44,7 @@ export const emailReport = async (req: Request, res: Response) => {
     pmfScore: report.pmfScore,
     pmfStage: report.pmfStage,
     verdict,
-    reportToken: token,
+    reportContent: content as any,
   });
 
   res.json({ success: true, data: { sent: true } });
