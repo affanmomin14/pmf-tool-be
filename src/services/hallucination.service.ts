@@ -468,7 +468,7 @@ export async function validateReport(params: {
   needsReview: boolean;
   attempts: number;
 }> {
-  const maxRetries = params.maxRetries ?? 2;
+  const maxRetries = params.maxRetries ?? 1;
 
   // First pass
   let { allFlags, fixedReport, errorCount } = runAllChecks(
@@ -478,7 +478,8 @@ export async function validateReport(params: {
     params.founderAnswers,
   );
 
-  if (errorCount <= 3) {
+  const ERROR_THRESHOLD = 5; // Accept up to 5 errors without full report regen (was 3)
+  if (errorCount <= ERROR_THRESHOLD) {
     return { report: fixedReport, flags: allFlags, needsReview: false, attempts: 1 };
   }
 
@@ -487,10 +488,10 @@ export async function validateReport(params: {
   let bestFlags = allFlags;
   let bestErrorCount = errorCount;
 
-  // Retry loop
+  // Retry loop (max 1 retry to limit pipeline time; was 2)
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     console.warn(
-      `[hallucination] Retry ${attempt}/${maxRetries} -- ${errorCount} error flags exceed threshold of 3`,
+      `[hallucination] Retry ${attempt}/${maxRetries} -- ${errorCount} error flags exceed threshold of ${ERROR_THRESHOLD}`,
     );
 
     const errorFlagDescriptions = allFlags
@@ -525,7 +526,7 @@ export async function validateReport(params: {
       bestErrorCount = errorCount;
     }
 
-    if (errorCount <= 3) {
+    if (errorCount <= ERROR_THRESHOLD) {
       return { report: fixedReport, flags: allFlags, needsReview: false, attempts: attempt + 1 };
     }
   }

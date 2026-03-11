@@ -97,18 +97,20 @@ async function searchMarketData(
       input: `Find market size data for the "${ctx.category}" / "${ctx.subCategory}" market.
 
 Product context: "${ctx.productDescription}"
+Target customers: "${ctx.icpDescription}"
 
 Provide:
 - Total Addressable Market (TAM) as a dollar amount with multiplier (e.g., '$4.2B', '$850M'). Return null if no reliable data.
-- Serviceable Addressable Market (SAM) as a dollar amount with multiplier. Return null if no reliable data.
+- Serviceable Addressable Market (SAM) as a dollar amount. SAM is the portion of TAM reachable by this specific product given its ICP: "${ctx.icpDescription}". If an exact SAM figure is not in reports, look for the specific segment size (e.g., "enterprise BI market" or "no-code analytics market") as a proxy. Return null only if absolutely nothing relevant can be found.
 - Annual growth rate as 'X.X% CAGR' format (e.g., '12.5% CAGR'). Return null if no reliable data.
-- Major regional market shares/splits with at least 2-4 regions.
+- Regional market breakdown: Search for geographic revenue splits. Provide at least 3-4 regions (North America, Europe, Asia-Pacific, Rest of World). For each region provide the percentage share of the global market. Search specifically for "${ctx.subCategory} market share by region" and "${ctx.category} revenue by geography".
 
 IMPORTANT: Search multiple sources. Try these specific searches:
 1. "${ctx.subCategory} market size 2024 2025 2026"
 2. "${ctx.category} market growth rate CAGR"
-3. "${ctx.subCategory} TAM SAM report"
-4. "${ctx.category} industry revenue forecast"
+3. "${ctx.subCategory} market size by region geography"
+4. "${ctx.category} industry revenue forecast regional breakdown"
+5. "${ctx.subCategory} serviceable addressable market ${ctx.icpDescription}"
 
 Look for recent market research reports from: Grand View Research, Mordor Intelligence, Fortune Business Insights, Gartner, MarketsandMarkets, Statista, IBISWorld, Precedence Research.
 
@@ -416,7 +418,8 @@ export async function runResearch(
     researchQuality = computeResearchQuality(competitors, market, complaints);
   }
 
-  // Level 2: Targeted retries for each weak dimension with broadened queries
+  // Level 2: Targeted retries for each weak dimension with broadened queries (L3-style market runs in same batch when no TAM)
+  let ranL3InL2 = false;
   if (researchQuality.overall === 'minimal' || researchQuality.overall === 'thin') {
     logger.info(`[research] Retry L2: Broadened queries (quality=${researchQuality.overall})`);
 
@@ -440,6 +443,7 @@ export async function runResearch(
     }
 
     if (!market.tam) {
+      // L2: targeted market retry
       retryPromises.push((async () => {
         const broaderCtx = {
           ...ctx,
@@ -452,6 +456,21 @@ export async function runResearch(
         };
         const retried = await searchMarketData(broaderCtx);
         if (retried.tam) market = retried;
+        callCount++;
+      })());
+      // L3-style broader category market (run in parallel with L2 to save a round trip)
+      ranL3InL2 = true;
+      retryPromises.push((async () => {
+        const broadCtx = {
+          ...ctx,
+          searchQueries: [
+            `${category} software market size global`,
+            `${category} industry market 2025 2026 billion`,
+            `${category} market growth forecast`,
+          ],
+        };
+        const retried = await searchMarketData(broadCtx);
+        if (retried.tam && !market.tam) market = retried;
         callCount++;
       })());
     }
@@ -493,8 +512,8 @@ export async function runResearch(
     logger.info(`[research] After L2 retries: quality=${researchQuality.overall} (competitors=${researchQuality.competitorCount}, market=${researchQuality.hasMarketData})`);
   }
 
-  // Level 3: Last resort — use broader parent category for market data
-  if (!market.tam) {
+  // Level 3: Last resort — use broader parent category for market data (skip if already ran in L2)
+  if (!market.tam && !ranL3InL2) {
     logger.info(`[research] Retry L3: Searching broader category "${category}" for market data`);
     const broadCtx = {
       ...ctx,

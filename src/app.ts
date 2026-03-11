@@ -13,8 +13,19 @@ export const app = express();
 
 // Security
 app.use(helmet());
+const allowedOrigins = env.CORS_ORIGINS.split(',').map((s) => s.trim());
 app.use(cors({
-  origin: env.CORS_ORIGINS.split(',').map((s) => s.trim()),
+  origin: (origin, cb) => {
+    // Allow requests with no origin (e.g. same-origin, Postman, curl)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    // Allow common local dev origins even if not in env (localhost vs 127.0.0.1)
+    if (origin === 'http://127.0.0.1:3000' || origin === 'http://localhost:3000') return cb(null, true);
+    cb(null, false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 
 // Body parsing

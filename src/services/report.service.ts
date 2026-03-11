@@ -18,7 +18,10 @@ const SYSTEM_PROMPT = `You are a PMF (Product-Market Fit) diagnostic analyst gen
 
 ## CORE RULES
 
-1. DATA ANCHORING: Every statistic in the market section MUST come from research_findings. For numeric fields (TAM, SAM, growth rate, funding, G2 ratings): if research has null, use "Data not available". NEVER estimate or fabricate specific numbers.
+1. DATA ANCHORING: Every statistic in the market section should come from research_findings when available. For numeric fields (TAM, SAM, growth rate, funding, G2 ratings): if research has a specific number, use it exactly. If research has null for a field, you MUST derive a reasonable estimate from related data you DO have and label it as an estimate. For example:
+   - If TAM is known but SAM is null, derive SAM as a percentage of TAM based on the product's ICP and target segment (e.g., "~$1.2B (est.)")
+   - If some regional percentages are known, derive the remaining regions to sum to ~100%
+   - NEVER output "Data not available" as a value field. Use "~$X (est.)" or "X% (est.)" with a brief note in the description explaining the basis.
 
 2. SCORE INJECTION: The scorecard dimension scores MUST exactly match the values in pre_computed_scores. Do NOT recalculate scores.
 
@@ -28,12 +31,11 @@ const SYSTEM_PROMPT = `You are a PMF (Product-Market Fit) diagnostic analyst gen
 
 5. Do not end any section with a summary sentence, a motivational line, or a transition to the next section. Just stop when the point is made.
 
-6. NEVER USE "Data not available" AS YOUR ONLY ANALYSIS. When specific research data is unavailable, you MUST still provide actionable analysis based on:
-   - The founder's own answers (product description, ICP, distribution model, traction data)
-   - Classification data (category, likely competitors, ICP extraction)
-   - General market knowledge that is well-established and widely known
-   - Logical inferences from the data you DO have
-   For example, if market TAM data is null but the product is in "Business Intelligence Software", reference well-known market sizing for that sector. If competitor G2 data is unavailable, still describe known competitors by their market position and product focus.
+6. ABSOLUTELY NEVER OUTPUT "Data not available" ANYWHERE IN THE REPORT. This is the most critical rule. When specific research data is unavailable:
+   - For market values (TAM, SAM, regional values): Derive estimates from related data. If TAM=$4.9B and SAM is unknown, estimate SAM based on the ICP's segment share. If only North America regional data exists, use known industry splits (NA ~35-40%, Europe ~25-30%, APAC ~20-25%, RoW ~10-15%) to fill in regions. Always mark estimates with "(est.)" suffix.
+   - For competitor fields: Use general knowledge about well-known companies. "Not publicly disclosed" is acceptable for funding. Never use "Data not available".
+   - For market descriptions: Synthesize from founder answers, classification data, general market knowledge, and logical inferences.
+   - For regions: ALWAYS populate all regions with non-zero percentages. If specific data is missing, derive from known industry geographic splits for the category.
 
 7. REALITY CHECK RESEARCH_SHOWS MUST NEVER BE JUST "Data not available": For each comparison, synthesize what you know from research data, classification likely_competitors, founder context, and general market knowledge. Example: Instead of "Data not available", write "The BI market is dominated by Tableau, Power BI, and Looker with combined market share exceeding 60%, making differentiation critical for new entrants."
 
@@ -84,10 +86,10 @@ Do NOT use: leverage, synergy, unlock, empower, cutting-edge, game-changing, rob
   - evidence: 1-2 sentences with specific numbers from research
 
 ### market
-- tam/sam: Each has value (e.g. "$4.2B") and description (1 sentence)
+- tam/sam: Each has value (e.g. "$4.2B") and description (1 sentence). If SAM is not in research, derive from TAM using the product's ICP segment share (e.g., if TAM is $4.9B and the product targets enterprise no-code BI, estimate SAM as the enterprise no-code segment of that TAM). Mark derived values with "(est.)".
 - growth_rate: Has value (e.g. "15%") and description (1 sentence)
-- regions: 2-5 geographic/segment regions with percentage, value, and note
-- real_number_analysis: 2-3 sentences grounding the numbers in reality
+- regions: 3-5 geographic regions. EVERY region MUST have a non-zero percentage and a dollar value. If only one region has data, derive the rest using known industry geographic splits for the software/SaaS sector (typical: NA 35-40%, Europe 25-30%, APAC 20-25%, RoW 5-15%). Mark derived values with "(est.)".
+- real_number_analysis: 2-3 sentences grounding the numbers in reality. Explain which figures are from research vs estimated.
 
 ### sales_model
 - comparison: you_said (founder's Q3), research_shows (what top companies in this space do), severity
@@ -182,9 +184,16 @@ function buildReportUserMessage(
   }
 
   if (processedResearch.market) {
-    if (processedResearch.market.tam === null) processedResearch.market.tam = "No TAM data found in research";
-    if (processedResearch.market.sam === null) processedResearch.market.sam = "No SAM data found in research";
-    if (processedResearch.market.growthRate === null) processedResearch.market.growthRate = "No growth rate found in research";
+    if (processedResearch.market.tam === null) processedResearch.market.tam = "No TAM data found — use general market knowledge for " + (classificationData?.category || "this sector") + " to provide an estimate marked (est.)";
+    if (processedResearch.market.sam === null && processedResearch.market.tam !== null) {
+      processedResearch.market.sam = `No SAM data found — DERIVE from TAM (${processedResearch.market.tam}) by estimating what % applies to the target ICP. Mark as (est.)`;
+    } else if (processedResearch.market.sam === null) {
+      processedResearch.market.sam = "No SAM data found — derive an estimate from TAM and target ICP segment. Mark as (est.)";
+    }
+    if (processedResearch.market.growthRate === null) processedResearch.market.growthRate = "No growth rate found — use known CAGR for " + (classificationData?.category || "this sector") + ". Mark as (est.)";
+    if (processedResearch.market.regions === null || (processedResearch.market.regions && processedResearch.market.regions.length === 0)) {
+      processedResearch.market.regions = "No regional data — DERIVE using standard SaaS geographic splits (NA ~38%, Europe ~27%, APAC ~22%, RoW ~13%) applied to the TAM. Mark as (est.)";
+    }
   }
 
   if (processedResearch.complaints) {
@@ -248,8 +257,9 @@ Because research data is limited, you MUST:
 
 2. **Market section**: If TAM/SAM/growth is unavailable from web research:
    - Use well-known industry estimates for the ${classificationData?.category || 'software'} market
-   - State clearly these are industry estimates, not verified figures
-   - Still populate the regions array with major market regions
+   - Mark all estimated values with "(est.)" suffix (e.g., "~$2.1B (est.)")
+   - ALWAYS populate the regions array with 3-5 regions, each with non-zero percentage and dollar values derived from TAM
+   - NEVER output "Data not available" as a value — always derive an estimate
 
 3. **Competitors section**: Even with limited research:
    - Use the classification's known competitors: ${(classificationData?.likely_competitors || []).join(', ')}
