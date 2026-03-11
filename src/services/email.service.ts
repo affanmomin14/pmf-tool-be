@@ -30,8 +30,10 @@ export async function sendReportEmail(params: SendReportEmailParams): Promise<Se
       { filename, content: pdfBuffer.toString('base64'), contentType: 'application/pdf' },
     ];
   } catch (err) {
-    console.warn('PDF generation failed for email attachment:', err instanceof Error ? err.message : String(err));
-    if (err instanceof Error && err.stack) console.warn(err.stack);
+    const msg = err instanceof Error ? err.message : String(err);
+    const name = err instanceof Error ? err.name : 'Error';
+    console.warn('[email] PDF generation failed:', name, msg);
+    if (err instanceof Error && err.stack) console.warn('[email] PDF stack:', err.stack);
   }
 
   await resend.emails.send({
