@@ -890,14 +890,49 @@ function renderSources(doc: PDFKit.PDFDocument, r: ReportOutput) {
 // Main export
 // ============================================================================
 
+/** Coerce types so PDF works in Lambda when DB JSON has string numbers or slight shape differences. */
+function normalizeForPdf(r: ReportOutput): ReportOutput {
+  const h = r?.header ?? ({} as any);
+  const header = {
+    ...h,
+    product_name: h.product_name ?? 'Product',
+    category: h.category ?? 'Category',
+    pmf_score: Number(h.pmf_score) || 0,
+    benchmark_score: Number(h.benchmark_score) || 0,
+    pmf_stage: ['pre_pmf', 'approaching', 'early_pmf', 'strong'].includes(h.pmf_stage) ? h.pmf_stage : 'pre_pmf',
+    primary_break: h.primary_break ?? '',
+    category_risk: ['low', 'medium', 'high'].includes(h.category_risk) ? h.category_risk : 'medium',
+    verdict: h.verdict ?? '',
+  };
+  const dims = Array.isArray(r?.scorecard?.dimensions) ? r.scorecard.dimensions : [];
+  const dimensions = dims.slice(0, 7).map((d: any) => ({
+    ...d,
+    name: d?.name ?? '',
+    score: Math.min(10, Math.max(1, Number(d?.score) || 1)),
+    benchmark: Math.min(10, Math.max(1, Number(d?.benchmark) || 1)),
+    status: ['critical', 'at_risk', 'on_track', 'strong'].includes(d?.status) ? d.status : 'on_track',
+    evidence: d?.evidence ?? '',
+    confidence: ['low', 'medium', 'high'].includes(d?.confidence) ? d.confidence : 'medium',
+  }));
+  while (dimensions.length < 7) {
+    dimensions.push({ name: '', score: 1, benchmark: 1, status: 'on_track', evidence: '', confidence: 'medium' });
+  }
+  return {
+    ...r,
+    header,
+    scorecard: { dimensions },
+  } as ReportOutput;
+}
+
 export async function generateReportPdf(report: ReportOutput): Promise<Buffer> {
+  const safe = normalizeForPdf(report);
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
       margins: { top: M.t, bottom: M.b, left: M.l, right: M.r },
       autoFirstPage: true,
       info: {
-        Title: `PMF Report - ${report.header.product_name}`,
+        Title: `PMF Report - ${safe.header.product_name}`,
         Author: 'PMF Insights',
         Subject: 'Product-Market Fit Assessment',
       },
@@ -908,35 +943,35 @@ export async function generateReportPdf(report: ReportOutput): Promise<Buffer> {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    renderCover(doc, report);
+    renderCover(doc, safe);
 
     addContentPage(doc);
-    renderOverview(doc, report);
+    renderOverview(doc, safe);
 
     addContentPage(doc);
-    renderRealityCheck(doc, report);
+    renderRealityCheck(doc, safe);
 
     addContentPage(doc);
-    renderScorecard(doc, report);
+    renderScorecard(doc, safe);
 
     addContentPage(doc);
-    renderMarket(doc, report);
+    renderMarket(doc, safe);
 
     addContentPage(doc);
-    renderSalesModel(doc, report);
+    renderSalesModel(doc, safe);
 
     addContentPage(doc);
-    renderCompetitors(doc, report);
+    renderCompetitors(doc, safe);
 
-    renderPositioning(doc, report);
-
-    addContentPage(doc);
-    renderBottomLine(doc, report);
+    renderPositioning(doc, safe);
 
     addContentPage(doc);
-    renderRecommendations(doc, report);
+    renderBottomLine(doc, safe);
 
-    renderSources(doc, report);
+    addContentPage(doc);
+    renderRecommendations(doc, safe);
+
+    renderSources(doc, safe);
 
     doc.end();
   });
