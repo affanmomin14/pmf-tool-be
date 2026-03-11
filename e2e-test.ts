@@ -221,15 +221,17 @@ async function main() {
     console.log('     ⚠️  No report data to validate');
   }
 
-  // ── 8. Send Email ──────────────────────────────────────────────────────
+  // ── 8. Send Email (with PDF attachment) ───────────────────────────────
   sectionTitle('8. Send Report Email');
   const t8 = Date.now();
-  const emailResult = await api('POST', `/api/reports/${reportToken}/email`, {
+  const emailResult = await api<{ sent: boolean; pdfAttached?: boolean }>('POST', `/api/reports/${reportToken}/email`, {
     email: TEST_EMAIL,
   });
   check('Email endpoint returns 200', emailResult.status === 200);
   check('Email sent successfully', emailResult.data?.sent === true);
+  check('PDF attached to email', emailResult.data?.pdfAttached === true, emailResult.data?.pdfAttached === false ? 'pdfAttached was false' : '');
   console.log(`     📧 Email sent to ${TEST_EMAIL} in ${elapsed(t8)}`);
+  console.log(`     📎 PDF attached: ${emailResult.data?.pdfAttached === true ? 'yes' : 'no'}`);
 
   // ── 9. Idempotency Check ───────────────────────────────────────────────
   sectionTitle('9. Idempotency — Re-run pipeline returns cached result');

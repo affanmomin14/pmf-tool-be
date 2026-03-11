@@ -12,19 +12,25 @@ interface SendReportEmailParams {
   reportContent: ReportOutput;
 }
 
-export async function sendReportEmail(params: SendReportEmailParams): Promise<void> {
+export interface SendReportEmailResult {
+  pdfAttached: boolean;
+}
+
+export async function sendReportEmail(params: SendReportEmailParams): Promise<SendReportEmailResult> {
   const { to, pmfScore, pmfStage, verdict, reportContent } = params;
 
   const emailHtml = buildReportEmailHtml({ pmfScore, pmfStage, verdict });
 
-  // Resend API expects attachment content as base64 string (JSON body); Buffer would serialize incorrectly
-  let attachments: Array<{ filename: string; content: string }> = [];
+  // Resend API: content as base64 string; contentType required for PDF
+  let attachments: Array<{ filename: string; content: string; contentType: string }> = [];
   try {
     const pdfBuffer = await generateReportPdf(reportContent);
     const filename = getReportFilename();
-    attachments = [{ filename, content: pdfBuffer.toString('base64') }];
+    attachments = [
+      { filename, content: pdfBuffer.toString('base64'), contentType: 'application/pdf' },
+    ];
   } catch (err) {
-    console.warn('PDF generation failed for email attachment, sending without PDF:', err instanceof Error ? err.message : String(err));
+    console.warn('PDF generation failed for email attachment:', err instanceof Error ? err.message : String(err));
     if (err instanceof Error && err.stack) console.warn(err.stack);
   }
 
@@ -35,4 +41,6 @@ export async function sendReportEmail(params: SendReportEmailParams): Promise<vo
     html: emailHtml,
     attachments,
   });
+
+  return { pdfAttached: attachments.length > 0 };
 }

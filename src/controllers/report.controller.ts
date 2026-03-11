@@ -39,7 +39,7 @@ export const emailReport = async (req: Request, res: Response) => {
     content?.executive_summary?.verdict ||
     '';
 
-  await sendReportEmail({
+  const { pdfAttached } = await sendReportEmail({
     to: email,
     pmfScore: report.pmfScore,
     pmfStage: report.pmfStage,
@@ -47,5 +47,5 @@ export const emailReport = async (req: Request, res: Response) => {
     reportContent: content as any,
   });
 
-  res.json({ success: true, data: { sent: true } });
+  res.json({ success: true, data: { sent: true, pdfAttached } });
 };
