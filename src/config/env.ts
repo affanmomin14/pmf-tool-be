@@ -7,9 +7,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   CORS_ORIGINS: z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string().default('http://localhost:3000')),
   REPORT_EXPIRY_DAYS: z.coerce.number().default(90),
-  OPENAI_MODEL: z.string().default('gpt-4o'),
-  OPENAI_REPORT_MODEL: z.string().default('gpt-4o'),
-  OPENAI_RESEARCH_MODEL: z.string().default('gpt-5'),
+  OPENAI_MODEL: z.preprocess((v) => (v == null || (typeof v === 'string' && v.trim() === '') ? undefined : v), z.string().default('gpt-4o')),
+  OPENAI_REPORT_MODEL: z.preprocess((v) => (v == null || (typeof v === 'string' && v.trim() === '') ? undefined : v), z.string().default('gpt-4o')),
+  OPENAI_RESEARCH_MODEL: z.preprocess((v) => (v == null || (typeof v === 'string' && v.trim() === '') ? undefined : v), z.string().default('gpt-4o')),
   OPENAI_MAX_TOKENS: z.coerce.number().default(6000),
   // No env or empty → default 5000 cents ($50)
   DAILY_SPEND_LIMIT_CENTS: z.preprocess(
