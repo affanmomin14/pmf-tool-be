@@ -65,6 +65,7 @@ model Assessment {
   classificationData Json?
   researchData       Json?
   scoreData          Json?
+  pipelineErrorMessage String?   // Set when async pipeline fails; cleared on retry or success
   createdAt          DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 

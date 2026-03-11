@@ -11,7 +11,11 @@ const envSchema = z.object({
   OPENAI_REPORT_MODEL: z.string().default('gpt-4o'),
   OPENAI_RESEARCH_MODEL: z.string().default('gpt-5'),
   OPENAI_MAX_TOKENS: z.coerce.number().default(6000),
-  DAILY_SPEND_LIMIT_CENTS: z.coerce.number().default(5000),
+  // No env or empty → default 5000 cents ($50)
+  DAILY_SPEND_LIMIT_CENTS: z.preprocess(
+    (v) => (v == null || (typeof v === 'string' && v.trim() === '') ? undefined : v),
+    z.coerce.number().min(1).default(5000)
+  ),
   LOG_LEVEL: z.preprocess(
     (v) => (typeof v === 'string' ? v.trim() || 'info' : v),
     z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info')

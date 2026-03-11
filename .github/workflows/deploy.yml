@@ -41,7 +41,7 @@ jobs:
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
           CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
-          DAILY_SPEND_LIMIT_CENTS: ${{ secrets.DAILY_SPEND_LIMIT_CENTS }}
+          DAILY_SPEND_LIMIT_CENTS: ${{ secrets.DAILY_SPEND_LIMIT_CENTS || '5000' }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           OPENAI_REPORT_MODEL: ${{ secrets.OPENAI_REPORT_MODEL }}
           OPENAI_RESEARCH_MODEL: ${{ secrets.OPENAI_RESEARCH_MODEL }}

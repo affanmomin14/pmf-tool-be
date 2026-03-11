@@ -67,6 +67,7 @@ export const getAssessmentWithResponses = async (id: string) => {
       id: true,
       problemType: true,
       status: true,
+      pipelineErrorMessage: true,
       createdAt: true,
       responses: {
         orderBy: { questionOrder: 'asc' },
@@ -84,6 +85,13 @@ export const getAssessmentWithResponses = async (id: string) => {
 
   if (!assessment) throw new NotFoundError('Assessment not found');
   return assessment;
+};
+
+export const clearPipelineError = async (assessmentId: string) => {
+  await prisma.assessment.update({
+    where: { id: assessmentId },
+    data: { pipelineErrorMessage: null },
+  });
 };
 
 export const getReportInfoByAssessmentId = async (assessmentId: string) => {

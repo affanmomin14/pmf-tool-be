@@ -505,7 +505,7 @@ export async function runFullPipeline(assessmentId: string) {
   });
   await prisma.assessment.update({
     where: { id: assessmentId },
-    data: { status: 'report_generated' },
+    data: { status: 'report_generated', pipelineErrorMessage: null },
   });
   log.stepEnd('TRANSITION STATUS', { newStatus: 'report_generated' });
 

@@ -71,6 +71,8 @@ export const completeAssessment = async (req: Request, res: Response) => {
     return res.json({ success: true, data: cached });
   }
 
+  // Clear any previous pipeline error so the frontend doesn't show stale message on retry
+  await assessmentService.clearPipelineError(id);
   // Fire async Lambda invocation for the pipeline (it handles status transitions internally)
   await invokePipelineAsync(id);
 
