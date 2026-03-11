@@ -442,7 +442,7 @@ export async function runFullPipeline(assessmentId: string) {
 
   // ── Step 9: Create Report record ──
   log.stepBegin(9, 'SAVE REPORT TO DB');
-  const urlToken = generateToken();
+  let urlToken = generateToken();
   const expiresAt = new Date(Date.now() + env.REPORT_EXPIRY_DAYS * 86400000);
   const totalLatencyMs = Date.now() - start;
 
@@ -452,30 +452,46 @@ export async function runFullPipeline(assessmentId: string) {
     );
   }
 
-  await prisma.report.create({
-    data: {
-      assessmentId,
-      content: validated.report as any,
-      scores: scoreData as any,
-      previewContent: previewContent as any,
-      intermediateArtifacts: {
-        classification,
-        researchQuality: research.researchQuality,
-        hallucinationFlags: validated.flags,
-        needsReview: validated.needsReview,
-        attempts: validated.attempts,
-      } as any,
-      pmfScore: scoreData.finalScore,
-      pmfStage: scoreData.pmfStage,
-      primaryBreak: scoreData.primaryBreak,
-      aiModel: env.OPENAI_REPORT_MODEL,
-      aiTokensUsed: totalTokens,
-      aiCostCents: totalCost,
-      aiLatencyMs: totalLatencyMs,
-      urlToken,
-      expiresAt,
-    },
-  });
+  try {
+    await prisma.report.create({
+      data: {
+        assessmentId,
+        content: validated.report as any,
+        scores: scoreData as any,
+        previewContent: previewContent as any,
+        intermediateArtifacts: {
+          classification,
+          researchQuality: research.researchQuality,
+          hallucinationFlags: validated.flags,
+          needsReview: validated.needsReview,
+          attempts: validated.attempts,
+        } as any,
+        pmfScore: scoreData.finalScore,
+        pmfStage: scoreData.pmfStage,
+        primaryBreak: scoreData.primaryBreak,
+        aiModel: env.OPENAI_REPORT_MODEL,
+        aiTokensUsed: totalTokens,
+        aiCostCents: totalCost,
+        aiLatencyMs: totalLatencyMs,
+        urlToken,
+        expiresAt,
+      },
+    });
+  } catch (err: any) {
+    // Race: another Lambda already created the report (e.g. double-invoke). Treat as success.
+    if (err?.code === 'P2002' && err?.meta?.modelName === 'Report') {
+      logger.warn(`[pipeline] Report already exists for ${assessmentId} (P2002), using existing`);
+      const existing = await prisma.report.findUnique({
+        where: { assessmentId },
+        select: { urlToken: true },
+      });
+      if (existing) {
+        urlToken = existing.urlToken;
+      }
+    } else {
+      throw err;
+    }
+  }
   log.stepEnd('SAVE REPORT TO DB', {
     reportToken: urlToken,
     expiresAt: expiresAt.toISOString(),
