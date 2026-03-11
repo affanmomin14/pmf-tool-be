@@ -49,6 +49,16 @@ jobs:
 
       - name: Run health check
         run: |
-          sleep 10  # Wait for deployment to be ready
-          curl -f https://kl5z1i0tdg.execute-api.ap-south-1.amazonaws.com/health || exit 1
-          echo "✅ Health check passed"
+          echo "Waiting 25s for Lambda to be ready after deploy..."
+          sleep 25
+          url="https://kl5z1i0tdg.execute-api.ap-south-1.amazonaws.com/health"
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i/5..."
+            if curl -sf --max-time 15 "$url" | grep -q '"status":"ok"'; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            [ $i -lt 5 ] && echo "Retrying in 10s..." && sleep 10
+          done
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
