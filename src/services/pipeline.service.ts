@@ -296,37 +296,51 @@ export async function runFullPipeline(assessmentId: string) {
     classification = assessment.classificationData;
   }
 
-  // ── Steps 2+3: Research & Scoring in PARALLEL ──
-  // Scoring depends only on assessment responses (not research), so run both concurrently.
-  log.stepBegin(2, 'RESEARCH + SCORING (Parallel)', {
-    note: 'Web searches + deterministic scoring run concurrently',
+  // ── Step 2: Research (Web Search) ──
+  log.stepBegin(2, 'RESEARCH (Web Search)', {
+    note: 'Parallel web searches for competitors, market, complaints, patterns',
   });
-
   let research: ResearchOutput;
-  let scoreData: ScoreData;
-
   try {
-    const [researchResult, scoringResult] = await Promise.all([
-      runResearch(assessmentId) as Promise<ResearchOutput>,
-      scoreAssessment(assessmentId) as Promise<ScoreData>,
-    ]);
-    research = researchResult;
-    scoreData = scoringResult;
-    log.stepEnd('RESEARCH + SCORING', {
+    research = await runResearch(assessmentId) as ResearchOutput;
+    log.stepEnd('RESEARCH', {
       competitors: research.competitors?.length ?? 0,
       marketTAM: research.market?.tam ?? 'N/A',
+      marketGrowth: research.market?.growthRate ?? 'N/A',
+      complaints: research.complaints?.length ?? 0,
       researchQuality: research.researchQuality,
-      finalScore: scoreData.finalScore,
-      pmfStage: scoreData.pmfStage,
-      primaryBreak: scoreData.primaryBreak,
     });
   } catch (err) {
-    log.error('Research + Scoring', err);
+    log.error('Research', err);
     throw err;
   }
 
-  // ── Step 3: Prepare report inputs ──
-  log.stepBegin(3, 'PREPARE REPORT INPUTS', {
+  // ── Step 3: Scoring (Deterministic, depends on research data in DB) ──
+  log.stepBegin(3, 'SCORING (Deterministic)', {
+    note: '7-dimension weighted scoring algorithm',
+  });
+  let scoreData: ScoreData;
+  try {
+    scoreData = await scoreAssessment(assessmentId) as ScoreData;
+    const dimSummary: Record<string, number> = {};
+    for (const [key, val] of Object.entries(scoreData.dimensions)) {
+      dimSummary[key] = (val as any).score;
+    }
+    log.stepEnd('SCORING', {
+      finalScore: scoreData.finalScore,
+      pmfStage: scoreData.pmfStage,
+      primaryBreak: scoreData.primaryBreak,
+      secondaryBreak: scoreData.secondaryBreak,
+      founderMismatch: scoreData.founderMismatch,
+      dimensions: dimSummary,
+    });
+  } catch (err) {
+    log.error('Scoring', err);
+    throw err;
+  }
+
+  // ── Step 4: Prepare report inputs ──
+  log.stepBegin(4, 'PREPARE REPORT INPUTS', {
     note: 'Re-fetch responses, build founderAnswers & scoringInput',
   });
   const assessmentWithResponses = await prisma.assessment.findUnique({
@@ -343,8 +357,8 @@ export async function runFullPipeline(assessmentId: string) {
     scoringDimensions: scoringInput.dimensions.length,
   });
 
-  // ── Step 4: Generate report (AI) ──
-  log.stepBegin(4, 'GENERATE REPORT (AI)', {
+  // ── Step 5: Generate report (AI) ──
+  log.stepBegin(5, 'GENERATE REPORT (AI)', {
     model: env.OPENAI_REPORT_MODEL,
     note: 'Full report generation via OpenAI structured output',
   });
@@ -371,8 +385,8 @@ export async function runFullPipeline(assessmentId: string) {
     throw err;
   }
 
-  // ── Step 5: Hallucination validation (auto-fix only, no regen) ──
-  log.stepBegin(5, 'HALLUCINATION VALIDATION', {
+  // ── Step 6: Hallucination validation (auto-fix only, no regen) ──
+  log.stepBegin(6, 'HALLUCINATION VALIDATION', {
     checks: 'HVAL-01 numbers, HVAL-02 companies, HVAL-03 score-text, HVAL-04 verdict, HVAL-05 banned words',
   });
   let validated;
@@ -400,8 +414,8 @@ export async function runFullPipeline(assessmentId: string) {
     throw err;
   }
 
-  // ── Step 6: Extract preview content ──
-  log.stepBegin(6, 'EXTRACT PREVIEW');
+  // ── Step 7: Extract preview content ──
+  log.stepBegin(7, 'EXTRACT PREVIEW');
   const previewContent = extractPreviewContent(validated.report, scoreData);
   log.stepEnd('EXTRACT PREVIEW', {
     pmfScore: previewContent.pmfScore,
@@ -411,8 +425,8 @@ export async function runFullPipeline(assessmentId: string) {
     primaryBreak: previewContent.primaryBreak,
   });
 
-  // ── Step 7: Aggregate AI metadata ──
-  log.stepBegin(7, 'AGGREGATE AI METADATA');
+  // ── Step 8: Aggregate AI metadata ──
+  log.stepBegin(8, 'AGGREGATE AI METADATA');
   const aiLogs = await prisma.aiLog.findMany({
     where: { assessmentId },
     select: { totalTokens: true, costCents: true, promptName: true },
@@ -426,8 +440,8 @@ export async function runFullPipeline(assessmentId: string) {
     breakdown: aiLogs.map((l) => `${l.promptName}: ${l.totalTokens} tokens, ${l.costCents}¢`),
   });
 
-  // ── Step 8: Create Report record ──
-  log.stepBegin(8, 'SAVE REPORT TO DB');
+  // ── Step 9: Create Report record ──
+  log.stepBegin(9, 'SAVE REPORT TO DB');
   const urlToken = generateToken();
   const expiresAt = new Date(Date.now() + env.REPORT_EXPIRY_DAYS * 86400000);
   const totalLatencyMs = Date.now() - start;
@@ -468,8 +482,8 @@ export async function runFullPipeline(assessmentId: string) {
     totalLatencyMs,
   });
 
-  // ── Step 9: Transition status ──
-  log.stepBegin(9, 'TRANSITION STATUS', {
+  // ── Step 10: Transition status ──
+  log.stepBegin(10, 'TRANSITION STATUS', {
     from: assessment.status,
     to: 'report_generated',
   });
