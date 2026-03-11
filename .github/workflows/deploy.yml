@@ -45,7 +45,7 @@ jobs:
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           OPENAI_REPORT_MODEL: ${{ secrets.OPENAI_REPORT_MODEL }}
           OPENAI_RESEARCH_MODEL: ${{ secrets.OPENAI_RESEARCH_MODEL }}
-          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL || 'info' }}
 
       - name: Run health check
         run: |
@@ -54,11 +54,15 @@ jobs:
           url="https://kl5z1i0tdg.execute-api.ap-south-1.amazonaws.com/health"
           for i in 1 2 3 4 5; do
             echo "Attempt $i/5..."
-            if curl -sf --max-time 15 "$url" | grep -q '"status":"ok"'; then
+            out=$(curl -s -w "\n%{http_code}" --max-time 15 "$url" || true)
+            code=$(echo "$out" | tail -n1)
+            body=$(echo "$out" | sed '$d')
+            if [ "$code" = "200" ] && echo "$body" | grep -q '"status":"ok"'; then
               echo "✅ Health check passed"
               exit 0
             fi
+            echo "  Response ($code): $body"
             [ $i -lt 5 ] && echo "Retrying in 10s..." && sleep 10
           done
-          echo "❌ Health check failed after 5 attempts"
+          echo "❌ Health check failed after 5 attempts. Check Lambda logs in CloudWatch for startup errors."
           exit 1
