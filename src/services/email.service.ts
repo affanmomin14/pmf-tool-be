@@ -17,13 +17,15 @@ export async function sendReportEmail(params: SendReportEmailParams): Promise<vo
 
   const emailHtml = buildReportEmailHtml({ pmfScore, pmfStage, verdict });
 
-  let attachments: Array<{ filename: string; content: Buffer }> = [];
+  // Resend API expects attachment content as base64 string (JSON body); Buffer would serialize incorrectly
+  let attachments: Array<{ filename: string; content: string }> = [];
   try {
     const pdfBuffer = await generateReportPdf(reportContent);
     const filename = getReportFilename();
-    attachments = [{ filename, content: pdfBuffer }];
+    attachments = [{ filename, content: pdfBuffer.toString('base64') }];
   } catch (err) {
-    console.warn('PDF generation failed for email attachment, sending without PDF:', err);
+    console.warn('PDF generation failed for email attachment, sending without PDF:', err instanceof Error ? err.message : String(err));
+    if (err instanceof Error && err.stack) console.warn(err.stack);
   }
 
   await resend.emails.send({
