@@ -890,37 +890,43 @@ function renderSources(doc: PDFKit.PDFDocument, r: ReportOutput) {
 // Main export
 // ============================================================================
 
-/** Coerce types so PDF works in Lambda when DB JSON has string numbers or slight shape differences. */
+/** Safe defaults so PDF never throws in Lambda when DB JSON shape/type differs. */
 function normalizeForPdf(r: ReportOutput): ReportOutput {
   const h = r?.header ?? ({} as any);
   const header = {
-    ...h,
     product_name: h.product_name ?? 'Product',
     category: h.category ?? 'Category',
     pmf_score: Number(h.pmf_score) || 0,
     benchmark_score: Number(h.benchmark_score) || 0,
-    pmf_stage: ['pre_pmf', 'approaching', 'early_pmf', 'strong'].includes(h.pmf_stage) ? h.pmf_stage : 'pre_pmf',
+    pmf_stage: (['pre_pmf', 'approaching', 'early_pmf', 'strong'].includes(h.pmf_stage) ? h.pmf_stage : 'pre_pmf') as ReportOutput['header']['pmf_stage'],
     primary_break: h.primary_break ?? '',
-    category_risk: ['low', 'medium', 'high'].includes(h.category_risk) ? h.category_risk : 'medium',
+    category_risk: (['low', 'medium', 'high'].includes(h.category_risk) ? h.category_risk : 'medium') as ReportOutput['header']['category_risk'],
     verdict: h.verdict ?? '',
   };
   const dims = Array.isArray(r?.scorecard?.dimensions) ? r.scorecard.dimensions : [];
   const dimensions = dims.slice(0, 7).map((d: any) => ({
-    ...d,
     name: d?.name ?? '',
     score: Math.min(10, Math.max(1, Number(d?.score) || 1)),
     benchmark: Math.min(10, Math.max(1, Number(d?.benchmark) || 1)),
-    status: ['critical', 'at_risk', 'on_track', 'strong'].includes(d?.status) ? d.status : 'on_track',
+    status: (['critical', 'at_risk', 'on_track', 'strong'].includes(d?.status) ? d.status : 'on_track') as any,
     evidence: d?.evidence ?? '',
-    confidence: ['low', 'medium', 'high'].includes(d?.confidence) ? d.confidence : 'medium',
+    confidence: (['low', 'medium', 'high'].includes(d?.confidence) ? d.confidence : 'medium') as any,
   }));
   while (dimensions.length < 7) {
     dimensions.push({ name: '', score: 1, benchmark: 1, status: 'on_track', evidence: '', confidence: 'medium' });
   }
+  const def = (x: any, fallback: any) => (x != null && typeof x === 'object' ? x : fallback);
   return {
-    ...r,
     header,
     scorecard: { dimensions },
+    reality_check: def(r?.reality_check, { comparisons: [], root_cause: '' }),
+    market: def(r?.market, { tam: { value: '', description: '' }, sam: { value: '', description: '' }, growth_rate: { value: '', description: '' }, regions: [], real_number_analysis: '' }),
+    sales_model: def(r?.sales_model, { comparison: { you_said: '', research_shows: '', severity: 'aligned' }, models_table: [], diagnosis: '', options: [] }),
+    competitors: def(r?.competitors, { competitor_list: [], tiers: [], complaints: [] }),
+    positioning: def(r?.positioning, { current: { text: '', critique: [] }, recommended: { text: '', improvements: [] } }),
+    bottom_line: def(r?.bottom_line, { verdict: '', verdict_detail: '', working: [], not_working: [], score_progression: [], one_thing: { title: '', explanation: '' }, research_stats: [] }),
+    recommendations: Array.isArray(r?.recommendations) ? r.recommendations.slice(0, 5) : [],
+    sources: Array.isArray(r?.sources) ? r.sources : [],
   } as ReportOutput;
 }
 
