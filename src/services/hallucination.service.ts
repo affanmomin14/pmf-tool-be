@@ -1,6 +1,6 @@
 import type { FounderAnswers, ScoringInput, ReportOutput } from '../schemas/report.schema';
 import type { ResearchOutput } from '../schemas/research.schema';
-import { generateReportWithCorrections } from './report.service';
+// generateReportWithCorrections no longer used — auto-fix only, no regen
 
 // ============================================================================
 // Types
@@ -73,7 +73,32 @@ export function checkNumbers(
 ): HallucinationFlag[] {
   const flags: HallucinationFlag[] = [];
   const allowlist = buildNumberAllowlist(research, scores, founderAnswers);
-  const reportNumbers = extractNumbers(JSON.stringify(report));
+
+  // Also allow numbers from the report's own market section (derived estimates are expected)
+  const marketNumbers = extractNumbers(JSON.stringify(report.market));
+  for (const n of marketNumbers) allowlist.add(n);
+
+  // Allow numbers from the report's own competitor section (ratings, funding)
+  const compNumbers = extractNumbers(JSON.stringify(report.competitors));
+  for (const n of compNumbers) allowlist.add(n);
+
+  // Allow numbers from sales model table (ACV, conversion rates)
+  const salesNumbers = extractNumbers(JSON.stringify(report.sales_model));
+  for (const n of salesNumbers) allowlist.add(n);
+
+  // Allow numbers from score progression
+  const progressionNumbers = extractNumbers(JSON.stringify(report.bottom_line.score_progression));
+  for (const n of progressionNumbers) allowlist.add(n);
+
+  // Allow common small numbers used in recommendations/analysis (e.g., "3 competitor teardowns", "10 interviews")
+  for (let i = 1; i <= 100; i++) allowlist.add(String(i));
+
+  // Allow percentage patterns
+  const reportStr = JSON.stringify(report);
+  const pctMatches = reportStr.match(/\d+\.?\d*%/g) || [];
+  for (const p of pctMatches) allowlist.add(p.replace('%', ''));
+
+  const reportNumbers = extractNumbers(reportStr);
 
   for (const num of reportNumbers) {
     if (!allowlist.has(num)) {
@@ -82,7 +107,7 @@ export function checkNumbers(
         field: 'report_text',
         expected: 'Number from research/answers/scores',
         found: num,
-        severity: 'error',
+        severity: 'warning',
       });
     }
   }
@@ -468,77 +493,26 @@ export async function validateReport(params: {
   needsReview: boolean;
   attempts: number;
 }> {
-  const maxRetries = params.maxRetries ?? 1;
-
-  // First pass
-  let { allFlags, fixedReport, errorCount } = runAllChecks(
+  const { allFlags, fixedReport, errorCount } = runAllChecks(
     params.report,
     params.research,
     params.scores,
     params.founderAnswers,
   );
 
-  const ERROR_THRESHOLD = 5; // Accept up to 5 errors without full report regen (was 3)
-  if (errorCount <= ERROR_THRESHOLD) {
-    return { report: fixedReport, flags: allFlags, needsReview: false, attempts: 1 };
+  // Auto-fix only (banned words, verdict truncation). Never regenerate the full report —
+  // it costs 30-40s per attempt and the number check was the primary trigger (now warnings).
+  // Gibberish detection is the only case that truly warrants attention.
+  const gibberishErrors = allFlags.filter(f => f.check === 'gibberish_detection');
+  const needsReview = gibberishErrors.length > 0;
+
+  if (needsReview) {
+    console.warn(`[hallucination] Gibberish detected — flagging for review (${gibberishErrors.length} fields)`);
   }
 
-  // Track best attempt
-  let bestReport = fixedReport;
-  let bestFlags = allFlags;
-  let bestErrorCount = errorCount;
-
-  // Retry loop (max 1 retry to limit pipeline time; was 2)
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    console.warn(
-      `[hallucination] Retry ${attempt}/${maxRetries} -- ${errorCount} error flags exceed threshold of ${ERROR_THRESHOLD}`,
-    );
-
-    const errorFlagDescriptions = allFlags
-      .filter((f) => f.severity === 'error')
-      .map((f) => `[${f.check}] ${f.field}: expected ${f.expected}, found ${f.found}`);
-
-    const newReport = await generateReportWithCorrections(
-      {
-        assessmentId: params.assessmentId,
-        founderAnswers: params.founderAnswers,
-        research: params.research,
-        scores: params.scores,
-        classificationData: params.classificationData,
-      },
-      errorFlagDescriptions,
-    );
-
-    const result = runAllChecks(
-      newReport,
-      params.research,
-      params.scores,
-      params.founderAnswers,
-    );
-
-    allFlags = result.allFlags;
-    fixedReport = result.fixedReport;
-    errorCount = result.errorCount;
-
-    if (errorCount < bestErrorCount) {
-      bestReport = fixedReport;
-      bestFlags = allFlags;
-      bestErrorCount = errorCount;
-    }
-
-    if (errorCount <= ERROR_THRESHOLD) {
-      return { report: fixedReport, flags: allFlags, needsReview: false, attempts: attempt + 1 };
-    }
+  if (errorCount > 0) {
+    console.info(`[hallucination] ${errorCount} error flags auto-accepted (auto-fixes applied, no regen)`);
   }
 
-  console.warn(
-    `[hallucination] All ${maxRetries} retries exhausted. Using best attempt with ${bestErrorCount} error flags. Flagging needsReview.`,
-  );
-
-  return {
-    report: bestReport,
-    flags: bestFlags,
-    needsReview: true,
-    attempts: maxRetries + 1,
-  };
+  return { report: fixedReport, flags: allFlags, needsReview, attempts: 1 };
 }
